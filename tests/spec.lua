@@ -438,4 +438,30 @@ for _,f in ipairs(frames) do
  end
 end
 check(headerFound,'readable column header band exists')
+-- Regression: SetFontObject retains local overrides, as it can in the client.
+local retained=CreateFrame('FontString'); retained:SetFont('game-font',30,'')
+retained:SetFontObject(GameFontNormal); local _,retainedSize=retained:GetFont(); eq(retainedSize,30)
+U.Style.Font(retained); local _,repairedSize=retained:GetFont(); eq(repairedSize,14,'ignore a pre-existing enlarged local override')
+U.Style.Font(retained,nil,true); local _,repairedTitle=retained:GetFont(); eq(repairedTitle,12)
+click('Party Setup')
+-- Warm both picker states, then repeatedly add/remove an ability via real callbacks.
+clickSlot(1,3); click('Imprison'); clickSlot(1,3); click('Clear slot')
+local sizes={}
+for f in pairs(U.Style.fonts) do local _,size=f:GetFont(); sizes[f]=size end
+for cycle=1,20 do
+ clickSlot(1,3); click('Imprison'); clickSlot(1,3); click('Clear slot')
+ local stable=true
+ for f,size in pairs(sizes) do local _,actual=f:GetFont(); if actual~=size then stable=false; break end end
+ check(stable,'font sizes drift after ability add/remove cycle '..cycle)
+end
+for cycle=1,5 do U.OpenConfig(); U.Style.RefreshFonts() end
+local stable=true
+for f,size in pairs(sizes) do local _,actual=f:GetFont(); if actual~=size then stable=false; break end end
+check(stable,'opening settings and refreshing fonts also remain stable')
+-- Follow intentional changes to the source FontObject without accumulating offsets.
+local gameGetter=GameFontNormal.GetFont
+GameFontNormal.GetFont=function() return 'game-font',13,'' end
+U.Style.Font(retained); local _,newBodySize=retained:GetFont(); eq(newBodySize,15)
+U.Style.Font(retained,nil,true); local _,newTitleSize=retained:GetFont(); eq(newTitleSize,13)
+GameFontNormal.GetFont=gameGetter; U.Style.RefreshFonts()
 print('PASS: '..count..' assertions; Lua 5.1 model, event, macro, UI and timer tests')

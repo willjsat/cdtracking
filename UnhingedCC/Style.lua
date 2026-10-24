@@ -48,9 +48,20 @@ function S.RefreshBorders() for f in pairs(S.borders) do sizeBorder(f) end end
 function S.Font(region,fallback,title)
     fallback=fallback or 'GameFontHighlightSmall'
     title=not not (title or fallback:find('Large') or fallback:find('Huge'))
-    S.fonts[region]={fallback=fallback,title=title}
+    local previous=S.fonts[region]
+    local source=_G[fallback] or GameFontNormal
     region:SetFontObject(_G[fallback] or fallback)
-    local basePath,baseSize,flags=region:GetFont()
+    local basePath,baseSize,flags
+    -- SetFontObject can retain a widget's local SetFont overrides. Read the
+    -- shared FontObject, never the already-enlarged widget, on redraw.
+    if source and source.GetFont then
+        basePath,baseSize,flags=source:GetFont()
+    elseif previous and previous.fallback==fallback then
+        basePath,baseSize,flags=previous.basePath,previous.baseSize,previous.flags
+    else
+        basePath,baseSize,flags=region:GetFont()
+    end
+    S.fonts[region]={fallback=fallback,title=title,basePath=basePath,baseSize=baseSize,flags=flags}
     local size=(baseSize or 11)+(title and 0 or 2)
     local path
     if EllesmereUI and type(EllesmereUI.GetFontPath)=='function' then

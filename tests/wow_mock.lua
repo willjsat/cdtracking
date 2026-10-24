@@ -15,7 +15,8 @@ function methods:SetWidth(w) self.width=w end
 function methods:SetHeight(h) self.height=h end
 function methods:SetPoint(...) self.point={...} end
 function methods:ClearAllPoints() self.point=nil end
-function methods:SetFontObject(font) self.fontObject=type(font)=='string' and (_G[font] or GameFontNormal) or font; self.fontPath=nil end
+-- Changing inheritance need not clear local SetFont overrides.
+function methods:SetFontObject(font) self.fontObject=type(font)=='string' and (_G[font] or GameFontNormal) or font end
 function methods:GetFont()
  if self.fontPath then return self.fontPath,self.fontSize,self.fontFlags end
  if self.fontObject then return self.fontObject:GetFont() end

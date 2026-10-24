@@ -77,3 +77,9 @@ Automatic ability assignment now ranks kicks and stops independently. A new assi
 The main settings frame uses a fill without any outside border; popup outlines use the same colour as their title bar. Body fonts are two points above the inherited role size, while title roles retain their existing size. Font refreshes reset to the inherited font object before applying the increase, preventing cumulative growth.
 
 Party Setup buttons, picker entries and mouse-enabled Prioritisation icon buttons call the game's `GameTooltip:SetSpellByID` for the selected spell. These are native tooltips, not locally reconstructed spell descriptions. Pooled widgets clear old hover handlers before reuse so redraws do not accumulate callbacks. Tests cover tooltip spell IDs, leave-to-hide behaviour, callback reuse, font-size stability, popup outlines and the brighter table header band. Actual rendering and client spell data still require an in-game check.
+
+## 0.5.2 font-growth regression
+
+The 0.5.1 implementation read a widget's GetFont after SetFontObject and assumed the inherited size had been restored. Local SetFont overrides can remain in place, so each pooled-widget redraw added two points to the previous result. Our test mock incorrectly cleared those overrides in SetFontObject, masking the failure.
+
+The corrected mock reproduces the old failure (expected 14, got 16 on font refresh). Font sizing now reads the shared fallback FontObject directly and applies the body-text offset once. A cached unmodified baseline is retained for the defensive case where the source FontObject is unavailable. Tests cover recovery from a pre-existing enlarged override, twenty add/remove cycles through actual picker callbacks, repeated window opens/refreshes, and intentional changes to the source font size. Titles retain their source size. No saved configuration migration or reset is required.
