@@ -51,3 +51,9 @@ The new appearance uses custom solid-colour panels, borders and buttons without 
 ## 0.2.1 generated IDs only
 
 Removed custom tracking IDs from the configuration UI and runtime model. Prioritisation shows the computed ID as read-only text. Saved v1/v2 configurations and older text imports retain their assignments and cooldown settings but discard custom IDs. The UCC3 export format carries no trigger field. Macro generation, the displayed value and exact-message lookup all use the same player/ability-derived function. Tests cover custom-ID removal through both SavedVariables and import/export, rejection of old custom messages, canonical macro output and read-only UI rendering.
+
+## 0.3.0 settings and export changes
+
+The config schema remains version 3, while new copy/paste exports use `!UCC4!<Base64 payload>!<Adler-32>`. The payload is the existing UCC3 data-only representation. The checksum detects accidental corruption and is not an authenticity guarantee. Imports still accept older multiline formats, with optional surrounding quotes and omitted trailing blank fields. No third-party encoding library or executable serialization is used. The Lua encoder and checksum are compared against Python's standard-library Base64 and Adler-32 implementations.
+
+The UI uses flat navy, blue and violet colours from the Devourer reference. All themed frames calculate border thickness from their own effective scale, and borders refresh on UI scale changes. Only explicit title-bar frames register drag handlers. The compact ability picker combines a class dropdown with its text search. No changes to cooldown tracking or the generated chat-ID rules are required.

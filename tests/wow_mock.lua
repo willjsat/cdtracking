@@ -14,7 +14,16 @@ function methods:SetWidth(w) self.width=w end
 function methods:SetHeight(h) self.height=h end
 function methods:SetPoint(...) self.point={...} end
 function methods:ClearAllPoints() self.point=nil end
-function methods:GetEffectiveScale() return 1 end
+function methods:GetEffectiveScale() return (self.scale or 1)*(self.parent and self.parent:GetEffectiveScale() or 1) end
+function methods:SetScale(s) self.scale=s end
+function methods:SetBackdrop(b) self.backdrop=b end
+function methods:GetBackdrop() return self.backdrop end
+function methods:SetBackdropColor(...) self.backdropColor={...} end
+function methods:GetBackdropColor() return unpack(self.backdropColor or {1,1,1,1}) end
+function methods:SetBackdropBorderColor(...) self.borderColor={...} end
+function methods:GetBackdropBorderColor() return unpack(self.borderColor or {1,1,1,1}) end
+function methods:StartMoving() self.moving=true end
+function methods:StopMovingOrSizing() self.moving=false end
 function methods:GetFrameLevel() return 1 end
 function methods:GetWidth() return self.width or 1920 end
 function methods:GetHeight() return self.height or 1080 end

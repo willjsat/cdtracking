@@ -13,7 +13,7 @@ eq(imported.players[1].slots[2].override,33)
 eq(imported.players[1].slots[2].trigger,nil,'custom IDs discarded')
 check(not U.Import('return os.execute("bad")'))
 check(not U.Import(string.rep('X',32769)))
-check(not U.Import(U.Export(c):gsub('Brick','%%ZZ',1)))
+check(not U.Import(U.Export(c):sub(1,-2)..'z'),'damaged export rejected')
 local bad=clone(c); bad.players[1].slots[2].spell=183752; check(not U.Validate(bad),'reject kick in stop slot')
 bad=clone(c); bad.players[2].name='brick'; check(not U.Validate(bad),'duplicate name')
 bad=clone(c); bad.players[1].slots[1].priority=0; check(not U.Validate(bad))
@@ -192,7 +192,7 @@ local fromV2=assert(U.Import(legacyExport(legacy,'UCC2')))
 eq(fromV2.players[1].slots[3].trigger,nil)
 eq(U.Trigger(fromV2.players[1],3),'AngeelsVoidNova')
 local serialized=U.Export(legacy)
-check(serialized:match('^UCC3'))
+check(serialized:match('^!UCC4!'))
 check(not serialized:find('MyCustomVoid',1,true),'export drops custom IDs even from unnormalized input')
 local roundtrip=assert(U.Import(serialized)); eq(roundtrip.players[1].slots[2].override,33)
 roundtrip.players[1].slots[2].trigger='SneakyOverride'
@@ -212,4 +212,68 @@ for _,f in ipairs(frames) do
  end
 end
 check(readonly>0,'generated ID shown as read-only text')
+-- Clipboard-safe exports: quoted/wrapped input, Unicode and missing legacy trailing tabs.
+local exported=U.Export(U.db)
+check(not exported:find('%s'),'export is a single unbroken string')
+local quoted=assert(U.Import('"'..exported..'"')); eq(quoted.players[1].name,U.db.players[1].name)
+local wrapped=exported:gsub('(.)(.)(.)(.)(.)(.)','%1%2%3%4%5%6\n')
+check(U.Import(wrapped),'line-wrapped encoded export imports')
+local broken=exported:sub(1,10)..(exported:sub(11,11)=='A' and 'B' or 'A')..exported:sub(12)
+check(not U.Import(broken),'checksum rejects a changed payload')
+local old=U.NewConfig(); old.players[1].name='Angeels'; old.players[2].name='Iamthelight'
+old.players[1].slots[1].spell=183752; old.players[1].slots[2].spell=217832
+old.players[2].slots[1].spell=96231; old.players[2].slots[2].spell=115750
+local oldRows={'UCC3'}
+for _,p in ipairs(old.players) do
+ oldRows[#oldRows+1]='P\t'..p.name
+ for _,a in ipairs(p.slots) do oldRows[#oldRows+1]=table.concat({'A',a.spell,a.priority,''},'\t') end
+end
+local pasted=table.concat(oldRows,'\n')
+local fixed=assert(U.Import('"'..pasted..'"')); eq(fixed.players[2].slots[2].spell,115750)
+local trimmed=pasted:gsub('[\t ]+\n','\n'):gsub('[\t ]+$','')
+check(U.Import(trimmed),'older exports survive clipboard whitespace trimming')
+local unicode=U.NewConfig(); unicode.players[1].name='Brïck-Realm'
+eq(assert(U.Import(U.Export(unicode))).players[1].name,'Brïck-Realm')
+-- Explicit class filter composes with search and uses compact entries.
+click('Party Setup'); clickSlot(1,2)
+click('All classes'); click('Demon Hunter')
+local pickerFrame
+for _,f in ipairs(frames) do if f.classMenu and f.classFilter=='DEMONHUNTER' then pickerFrame=f end end
+check(pickerFrame,'class filter selected')
+local matches=0
+for _,f in ipairs(frames) do
+ if f.parent==pickerFrame.content and f.abilityID and f:IsShown() then
+  matches=matches+1; eq(U.Abilities[f.abilityID].class,'DEMONHUNTER'); eq(f.height,34)
+ end
+end
+check(matches>0)
+pickerFrame.search.text='Void'; pickerFrame.search.scripts.OnTextChanged(pickerFrame.search,true)
+local filtered=0
+for _,f in ipairs(frames) do if f.parent==pickerFrame.content and f.abilityID and f:IsShown() then filtered=filtered+1; eq(f.abilityID,1234195) end end
+eq(filtered,1,'class plus text search')
+-- All three windows drag only from their title bars.
+click('Export')
+local windows=0
+for _,f in ipairs(frames) do
+ if f.titleBar then
+  windows=windows+1; eq(f.scripts.OnDragStart,nil,'content cannot start dragging')
+  check(f.titleBar.scripts.OnDragStart); f.titleBar.scripts.OnDragStart(f.titleBar); eq(f.moving,true)
+  f.titleBar.scripts.OnDragStop(f.titleBar); eq(f.moving,false)
+  check(f.titleBar.close.borderColor[1]>.5,'red close button')
+ end
+end
+eq(windows,3)
+-- Export output stays read-only and matches the actual config.
+local output
+for _,f in ipairs(frames) do if f.box and f.output==U.Export(U.db) then output=f end end
+check(output); eq(assert(U.Import(output.box:GetText())).players[1].name,U.db.players[1].name)
+output.box.text='accidental edit'; output.box.scripts.OnTextChanged(output.box,true)
+eq(output.box:GetText(),output.output,'export text cannot be overwritten')
+-- Scaled borders remain one physical pixel, including a downscaled window.
+U.Style.RefreshBorders()
+local borders=0
+for f in pairs(U.Style.borders) do
+ borders=borders+1; check(math.abs(f.backdrop.edgeSize*f:GetEffectiveScale()-1)<.000001)
+end
+check(borders>0)
 print('PASS: '..count..' assertions; Lua 5.1 model, event, macro, UI and timer tests')

@@ -10,3 +10,17 @@ for file in [line.strip() for line in toc.splitlines() if line.strip().endswith(
     lua.execute('return assert(loadstring(...))', (root / 'UnhingedCC' / file).read_text())('UnhingedCC', namespace)
 lua.globals().U = namespace
 lua.execute((root / 'tests/spec.lua').read_text())
+
+# Check encoding against the standard library, independently of our Lua decoder.
+import base64
+import zlib
+for length in range(1, 81):
+    config = namespace.NewConfig()
+    config.players[1].name = 'N' * length
+    encoded = namespace.Export(config)
+    prefix, payload, digest = encoded[1:].split('!')
+    assert prefix == 'UCC4'
+    decoded = base64.b64decode(payload, validate=True)
+    assert decoded.startswith(b'UCC3\nP\t')
+    assert f'{zlib.adler32(decoded):08x}' == digest
+print('PASS: Base64 and checksum match Python standard library for 80 configs')

@@ -40,7 +40,7 @@ events:SetScript('OnEvent',function(self,event,...)
             elseif cmd=='reset' then for _,e in pairs(U.entries) do e.expires=0 end; U.RefreshDisplay()
             else U.OpenConfig() end
         end
-    elseif event=='UI_SCALE_CHANGED' then U.RefreshDisplay()
+    elseif event=='UI_SCALE_CHANGED' then U.RefreshDisplay(); U.Style.RefreshBorders()
     elseif event=='GROUP_ROSTER_UPDATE' or event=='PLAYER_ENTERING_WORLD' then U.Roster()
     else
         local message,sender=...

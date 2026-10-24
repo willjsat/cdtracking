@@ -73,7 +73,7 @@ local function dec(s)
     if s:gsub('%%%x%x',''):find('%%') then error('Malformed escape') end
     return (s:gsub('%%(%x%x)',function(h) return string.char(tonumber(h,16)) end))
 end
-function U.Export(c)
+local function serialize(c)
     local lines = {'UCC3'}
     for p = 1, 5 do
         local player = c.players[p]
@@ -85,9 +85,57 @@ function U.Export(c)
     end
     return table.concat(lines,'\n')
 end
+local alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+local function base64(text)
+    local out = {}
+    for i=1,#text,3 do
+        local a,b,c = text:byte(i,i+2)
+        local n = a*65536+(b or 0)*256+(c or 0)
+        out[#out+1] = alphabet:sub(floor(n/262144)%64+1,floor(n/262144)%64+1)
+            ..alphabet:sub(floor(n/4096)%64+1,floor(n/4096)%64+1)
+            ..(b and alphabet:sub(floor(n/64)%64+1,floor(n/64)%64+1) or '=')
+            ..(c and alphabet:sub(n%64+1,n%64+1) or '=')
+    end
+    return table.concat(out)
+end
+local function unbase64(text)
+    if #text%4~=0 or text:find('[^%w+/=]') then error('Invalid encoding') end
+    local out={}
+    for i=1,#text,4 do
+        local block=text:sub(i,i+3)
+        if block:find('=') and (i+3~=#text or not block:match('^[%w+/][%w+/][%w+/=]=$')) then error('Invalid padding') end
+        local values={}
+        for j=1,4 do
+            local ch=block:sub(j,j)
+            values[j]=ch=='=' and 0 or assert(alphabet:find(ch,1,true))-1
+        end
+        local n=values[1]*262144+values[2]*4096+values[3]*64+values[4]
+        out[#out+1]=string.char(floor(n/65536)%256)
+            ..(block:sub(3,3)~='=' and string.char(floor(n/256)%256) or '')
+            ..(block:sub(4,4)~='=' and string.char(n%256) or '')
+    end
+    return table.concat(out)
+end
+local function checksum(text)
+    local a,b=1,0
+    for i=1,#text do a=(a+text:byte(i))%65521; b=(b+a)%65521 end
+    return string.format('%08x',b*65536+a)
+end
+function U.Export(c)
+    local payload=serialize(c)
+    return '!UCC4!'..base64(payload)..'!'..checksum(payload)
+end
 function U.Import(text)
     if type(text) ~= 'string' or #text > 32768 then return nil, 'Config exceeds 32 KB.' end
     local ok, result, reason = pcall(function()
+        text=text:match('^%s*(.-)%s*$')
+        if text:sub(1,1)=='"' and text:sub(-1)=='"' then text=text:sub(2,-2) end
+        if text:sub(1,6)=='!UCC4!' then
+            local encoded,hash=text:gsub('%s',''):match('^!UCC4!([%w+/=]+)!(%x%x%x%x%x%x%x%x)$')
+            if not encoded then return nil,'Invalid export string.' end
+            text=unbase64(encoded)
+            if checksum(text)~=hash:lower() then return nil,'Export string is damaged. Copy it again.' end
+        end
         text = text:gsub('\r',''):gsub('\n+$','')
         local lines = {}; for l in (text .. '\n'):gmatch('(.-)\n') do lines[#lines+1] = l end
         if #lines ~= 31 or (lines[1] ~= 'UCC1' and lines[1] ~= 'UCC2' and lines[1] ~= 'UCC3') then return nil, 'Invalid UnhingedCC config.' end
@@ -95,16 +143,20 @@ function U.Import(text)
         -- Older formats carried a custom trigger field; accept but discard it.
         local legacy = lines[1] ~= 'UCC3'
         for p=1,5 do
-            local name = lines[n]:match('^P\t(.*)$'); if not name then return nil,'Invalid player record.' end
+            local name = lines[n]=='P' and '' or lines[n]:match('^P\t(.*)$'); if not name then return nil,'Invalid player record.' end
             c.players[p].name = dec(name); n=n+1
             for s=1,5 do
                 local id,priority,override
                 if legacy then
                     local trigger
-                    id,priority,override,trigger = lines[n]:match('^A\t(%d+)\t(%d+)\t([%d%.]*)\t(.*)$')
+                    for padding=0,2 do
+                        id,priority,override,trigger = (lines[n]..string.rep('\t',padding)):match('^A\t(%d+)\t(%d+)\t([%d%.]*)\t(.*)$')
+                        if id then break end
+                    end
                     if trigger then dec(trigger) end -- Validate escapes without retaining custom IDs.
                 else
                     id,priority,override = lines[n]:match('^A\t(%d+)\t(%d+)\t([%d%.]*)$')
+                    if not id then id,priority=lines[n]:match('^A\t(%d+)\t(%d+)$'); override='' end
                 end
                 if not id then return nil,'Invalid ability record.' end
                 c.players[p].slots[s] = {spell=tonumber(id),priority=tonumber(priority),override=override ~= '' and tonumber(override) or nil}
