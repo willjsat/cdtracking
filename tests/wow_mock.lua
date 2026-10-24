@@ -26,6 +26,11 @@ function methods:SetFont(path,size,flags)
  if path=='missing-font' then return false end
  self.fontPath=path; self.fontSize=size; self.fontFlags=flags; return true
 end
+function methods:SetStatusBarTexture(path)
+ if not self.fill then self.fill=CreateFrame('Texture',nil,self) end
+ self.fill.path=path
+end
+function methods:GetStatusBarTexture() return self.fill end
 function methods:GetEffectiveScale() return (self.scale or 1)*(self.parent and self.parent:GetEffectiveScale() or 1) end
 function methods:SetScale(s) self.scale=s end
 function methods:SetBackdrop(b) self.backdrop=b end
@@ -75,3 +80,6 @@ Constants={MacroConsts={MAX_CHARACTER_MACROS=30,MAX_ACCOUNT_MACROS=120}}
 MAX_CHARACTER_MACROS=nil
 function CreateMacro(name,icon,text) lastMacro=text; macroStore[121]={name=name,icon=icon,body=text}; macroStore[name]=macroStore[121]; return 121 end
 secret={}; function issecretvalue(v) return rawequal(v,secret) end
+
+physicalHeight=768
+function GetPhysicalScreenSize() return 1920,physicalHeight end

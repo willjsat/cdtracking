@@ -373,10 +373,10 @@ function U.OpenConfig()
         window.presetScroll=S.Scroll(side); window.presetScroll:SetPoint('TOPLEFT',12,-420); window.presetScroll:SetSize(186,218)
         window.presetContent=CreateFrame('Frame',nil,window.presetScroll); window.presetContent:SetSize(180,1); window.presetScroll:SetScrollChild(window.presetContent)
         window.presetButtons={}
-        label(side,'0.5.2',20,-651)
+        label(side,'0.5.3',20,-651)
         window.heading=label(window,'',240,-50,'GameFontNormalLarge'); window.heading:SetTextColor(unpack(S.gold))
         window.description=label(window,'',240,-80); window.description:SetTextColor(unpack(S.muted))
-        local line=window:CreateTexture(nil,'ARTWORK'); line:SetColorTexture(unpack(S.border)); line:SetSize(874,1/window:GetEffectiveScale()); line:SetPoint('TOPLEFT',240,-106)
+        local line=window:CreateTexture(nil,'ARTWORK'); line:SetColorTexture(unpack(S.border)); line:SetSize(874,S.Pixel(window)); window.separator=line; line:SetPoint('TOPLEFT',240,-106)
         window.scroll=S.Scroll(window); window.scroll:SetPoint('TOPLEFT',226,-130); window.scroll:SetSize(895,505)
         button(window,'Save Preset',976,-658,142,savePreset)
         window.reset=button(window,'Reset All',242,-658,120,function()
@@ -393,6 +393,6 @@ end
 
 function U.RefreshConfigLines()
     if window then
-        window.divider:SetWidth(S.Pixel(window.side))
+        window.divider:SetWidth(S.Pixel(window.side)); window.separator:SetHeight(S.Pixel(window))
     end
 end

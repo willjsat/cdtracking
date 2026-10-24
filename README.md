@@ -1,6 +1,6 @@
 # UnhingedCC
 
-A lightweight World of Warcraft **Retail 12.1.5** addon for manually announced party interrupts and crowd control. Version 0.5.2; Interface 120105. No runtime dependencies or bundled libraries.
+A lightweight World of Warcraft **Retail 12.1.5** addon for manually announced party interrupts and crowd control. Version 0.5.3; Interface 120105. No runtime dependencies or bundled libraries.
 
 ## Install
 
@@ -51,7 +51,7 @@ Names containing realms, such as `Angeels-TarrenMill`, produce chat IDs without 
 
 ## Display and tracking
 
-Two headerless lists, 20% narrower overall than v0.1.0 and with a one-physical-pixel gap between rows: left-hand ability icon, class-coloured status bar, player name and remaining seconds. Ready abilities show a full bar, ordered by priority. Cooling abilities drain toward zero, ordered by remaining time then priority. When an ability becomes ready it returns to its priority position above active timers.
+Two headerless lists, 20% narrower overall than v0.1.0 and with bar heights, icons and group origins aligned to physical pixels and exactly one physical pixel between rows: left-hand ability icon, class-coloured status bar, player name and remaining seconds. Ready abilities show a full bar, ordered by priority. Cooling abilities drain toward zero, ordered by remaining time then priority. When an ability becomes ready it returns to its priority position above active timers. Layout accounts for both UI scale and screen resolution; dragging and display-mode changes re-align the groups to the pixel grid. Saved positions are retained, with only subpixel rounding applied for rendering.
 
 Only **exact** configured messages from the configured party member are accepted. Party, party leader, instance chat, instance leader and your own echoed messages are supported. The sender must resolve through the current party roster. Ambiguous short names are rejected; use full realm-qualified names. Repeated announcements during an active timer are ignored. No addon installation is required for the announcing player; they only need the macro.
 
@@ -86,4 +86,4 @@ Tests execute the actual addon Lua in Lua 5.1 via Lupa, including model/config v
 
 Before use: enable script errors (`/console scriptErrors 1`), configure two real party members, test announcements from each, reject spoofed/partial messages, verify cooldown/priority transitions, drag/lock both groups, import/export and reload. Repeat in a dungeon during combat and check `/ucc status`. Test premade party and instance groups separately. Verify macros when casts fail, as those still announce. Run alongside your usual addons and check CPU/memory in game.
 
-To package: `python tools/package.py` creates `dist/UnhingedCC-0.5.2.zip` containing only the installable addon folder.
+To package: `python tools/package.py` creates `dist/UnhingedCC-0.5.3.zip` containing only the installable addon folder.

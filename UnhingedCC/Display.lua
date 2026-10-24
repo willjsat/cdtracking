@@ -1,14 +1,32 @@
 local _, U = ...
 local groups = {}
 local WIDTH, HEIGHT, ICON_GAP = 248 * .8, 22, 2
-local function pixel() return 1 / UIParent:GetEffectiveScale() end
+local function round(v) return math.floor(v+.5) end
+local function metrics(f)
+    local pixel=U.Style.Pixel(f)
+    local height=math.max(1,round(HEIGHT/pixel))
+    local width=math.max(height+2,round(WIDTH/pixel))
+    local iconGap=math.max(1,round(ICON_GAP/pixel))
+    return {pixel=pixel,height=height*pixel,width=width*pixel,gap=pixel,step=(height+1)*pixel,inset=(height+iconGap)*pixel,iconGap=iconGap*pixel}
+end
+local function positionGroup(f,kind)
+    local pos=U.db.positions[kind]
+    local x=pos and pos.x or UIParent:GetWidth()/2+(kind=='kick' and -160 or 160)-WIDTH/2
+    local y=pos and pos.y or UIParent:GetHeight()/2+40+HEIGHT/2
+    local pixel=U.Style.Pixel(UIParent)
+    f:ClearAllPoints()
+    f:SetPoint('TOPLEFT',UIParent,'BOTTOMLEFT',round(x/pixel)*pixel,round(y/pixel)*pixel)
+end
+local function snapTexture(t)
+    t:SetSnapToPixelGrid(true); t:SetTexelSnappingBias(0)
+end
 local texture = 'Interface\\Buttons\\WHITE8X8'
 local function color(e)
     local class = U.classes and U.classes[U.Name(e.player)] or e.ability.class
     local c = RAID_CLASS_COLORS[class]
     return c or {r=.65,g=.65,b=.65}
 end
-local function makeGroup(kind, label, x)
+local function makeGroup(kind, label)
     local f = CreateFrame('Frame',nil,UIParent,'BackdropTemplate')
     f:SetSize(WIDTH,HEIGHT); f:SetClampedToScreen(true); f:SetMovable(true)
     f.rows={}; f.kind=kind
@@ -22,19 +40,19 @@ local function makeGroup(kind, label, x)
     f.mover:SetScript('OnDragStart',function() if not U.db.locked then f:StartMoving() end end)
     f.mover:SetScript('OnDragStop',function()
         f:StopMovingOrSizing()
-        U.db.positions[kind]={x=f:GetLeft()-UIParent:GetLeft(),y=f:GetTop()-UIParent:GetBottom()}
+        local pixel=U.Style.Pixel(UIParent)
+        U.db.positions[kind]={x=round((f:GetLeft()-UIParent:GetLeft())/pixel)*pixel,y=round((f:GetTop()-UIParent:GetBottom())/pixel)*pixel}
+        positionGroup(f,kind)
     end)
-    local pos=U.db.positions[kind]
-    if pos then f:SetPoint('TOPLEFT',UIParent,'BOTTOMLEFT',pos.x,pos.y)
-    else f:SetPoint('CENTER',UIParent,'CENTER',x,40) end
+    positionGroup(f,kind)
     return f
 end
-local function makeRow(parent, i)
+local function makeRow(parent)
     local row=CreateFrame('StatusBar',nil,parent)
-    row:SetSize(WIDTH-HEIGHT-ICON_GAP,HEIGHT); row:SetStatusBarTexture(texture)
-    row:SetPoint('TOPLEFT',HEIGHT+ICON_GAP,-(i-1)*(HEIGHT+pixel()))
-    row.bg=row:CreateTexture(nil,'BACKGROUND'); row.bg:SetAllPoints(); row.bg:SetColorTexture(.09,.09,.10,.9)
-    row.icon=row:CreateTexture(nil,'ARTWORK'); row.icon:SetSize(22,22); row.icon:SetPoint('RIGHT',row,'LEFT',-2,0)
+    row:SetStatusBarTexture(texture)
+    local fill=row:GetStatusBarTexture(); if fill then snapTexture(fill) end
+    row.bg=row:CreateTexture(nil,'BACKGROUND'); row.bg:SetAllPoints(); row.bg:SetColorTexture(.09,.09,.10,.9); snapTexture(row.bg)
+    row.icon=row:CreateTexture(nil,'ARTWORK'); snapTexture(row.icon)
     row.icon:SetTexCoord(.08,.92,.08,.92)
     row.name=row:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall'); U.Style.Font(row.name); row.name:SetPoint('LEFT',5,0)
     row.name:SetWidth(WIDTH-HEIGHT-ICON_GAP-48); row.name:SetJustifyH('LEFT')
@@ -74,18 +92,23 @@ local function tick(_,dt)
 end
 function U.RefreshDisplay()
     if not groups.kick then
-        groups.kick=makeGroup('kick','Kicks',-160)
-        groups.stop=makeGroup('stop','Stops',160)
+        groups.kick=makeGroup('kick','Kicks')
+        groups.stop=makeGroup('stop','Stops')
     end
     local now,active=GetTime(),false
     for kind,f in pairs(groups) do
         local list=U.Order(kind,now)
         f.mover:SetShown(not U.db.locked)
-        f:SetHeight(math.max(HEIGHT,#list*HEIGHT+math.max(0,#list-1)*pixel()))
+        local m=metrics(f)
+        f:SetSize(m.width,math.max(m.height,#list*m.height+math.max(0,#list-1)*m.gap))
+        if f.layoutPixel~=m.pixel then positionGroup(f,kind); f.layoutPixel=m.pixel end
         f:SetShown(#list>0 or not U.db.locked)
         for i,e in ipairs(list) do
-            local row=f.rows[i] or makeRow(f,i); f.rows[i]=row; row.entry=e
-            row:ClearAllPoints(); row:SetPoint('TOPLEFT',HEIGHT+ICON_GAP,-(i-1)*(HEIGHT+pixel()))
+            local row=f.rows[i] or makeRow(f); f.rows[i]=row; row.entry=e
+            row:SetSize(m.width-m.inset,m.height)
+            row:ClearAllPoints(); row:SetPoint('TOPLEFT',m.inset,-(i-1)*m.step)
+            row.icon:SetSize(m.height,m.height); row.icon:ClearAllPoints(); row.icon:SetPoint('RIGHT',row,'LEFT',-m.iconGap,0)
+            row.name:SetWidth(math.max(1,m.width-m.inset-48))
             row.icon:SetTexture(e.ability.icon); row.name:SetText(e.player:match('^[^-]+'))
             local c=color(e); row:SetStatusBarColor(c.r,c.g,c.b,.95)
             row:Show(); paint(row,now)
@@ -97,10 +120,5 @@ function U.RefreshDisplay()
 end
 
 function U.RestoreDisplayPositions()
-    for kind,f in pairs(groups) do
-        f:ClearAllPoints()
-        local pos=U.db.positions[kind]
-        if pos then f:SetPoint('TOPLEFT',UIParent,'BOTTOMLEFT',pos.x,pos.y)
-        else f:SetPoint('CENTER',UIParent,'CENTER',kind=='kick' and -160 or 160,40) end
-    end
+    for kind,f in pairs(groups) do positionGroup(f,kind) end
 end

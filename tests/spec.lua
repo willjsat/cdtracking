@@ -144,8 +144,8 @@ local rows={}
 for _,f in ipairs(frames) do if f.kind=='StatusBar' and f.entry and f:IsShown() then rows[#rows+1]=f end end
 check(#rows>0)
 for _,r in ipairs(rows) do
- eq(r.parent.width,248*.8)
- eq(r.width,248*.8-24)
+ eq(r.parent.width,198)
+ eq(r.width,174)
  check(r.point[3]==0 or r.point[3]==-23,'headerless 22px rows with 1px gap')
 end
 -- Catalog integrity: every added spell has valid timer metadata and source text.
@@ -187,7 +187,7 @@ U.RefreshDisplay()
 local seenGap=false
 for _,f in ipairs(frames) do
  if f.kind=='StatusBar' and f.entry and f:IsShown() and f.entry.ability.kind=='stop' then
-  if f.point[3]~=0 then eq(f.point[3],-22.8); seenGap=true end
+  if f.point[3]~=0 then check(math.abs(f.point[3]+23.2)<.000001); seenGap=true end
  end
 end
 check(seenGap,'scaled row spacing verified')
@@ -464,4 +464,55 @@ GameFontNormal.GetFont=function() return 'game-font',13,'' end
 U.Style.Font(retained); local _,newBodySize=retained:GetFont(); eq(newBodySize,15)
 U.Style.Font(retained,nil,true); local _,newTitleSize=retained:GetFont(); eq(newTitleSize,13)
 GameFontNormal.GetFont=gameGetter; U.Style.RefreshFonts()
+-- Regression: fractional physical heights make snapped textures show uneven gaps.
+local pixelsConfig=U.NewConfig()
+for p=1,5 do
+ pixelsConfig.players[p].name='Pixels'..p
+ pixelsConfig.players[p].slots[1].spell=183752
+ for slot,id in ipairs({179057,1234195,217832,211881}) do pixelsConfig.players[p].slots[slot+1].spell=id end
+end
+pixelsConfig.positions.kick={x=100.33,y=555.17}
+pixelsConfig.positions.stop={x=300.47,y=555.17}
+local function roundPixel(v) return math.floor(v+.5) end
+for _,screenHeight in ipairs({720,768,1080,1440,2160}) do
+ physicalHeight=screenHeight
+ for _,scale in ipairs({.53,.64,.711111,.8,.9,1,1.25}) do
+ UIParent.GetEffectiveScale=function() return scale end
+ U.Commit(pixelsConfig); U.RestoreDisplayPositions()
+ for _,f in ipairs(frames) do
+  if f.kind=='kick' or f.kind=='stop' then
+   local top=f.point[5]
+   local physicalScale=scale*screenHeight/768
+   local stable=true
+   if math.abs(top*physicalScale-roundPixel(top*physicalScale))>.000001 then stable=false end
+   for i=1,#f.rows-1 do
+    local a,b=f.rows[i],f.rows[i+1]
+    if a:IsShown() and b:IsShown() then
+     local bottom=roundPixel((top+a.point[3])*physicalScale)-roundPixel(a.height*physicalScale)
+     local nextTop=roundPixel((top+b.point[3])*physicalScale)
+     if bottom-nextTop~=1 or math.abs(a.height*physicalScale-roundPixel(a.height*physicalScale))>.000001 then stable=false end
+     if a.icon.height~=a.height then stable=false end
+    end
+   end
+   check(stable,'every row/icon gap is one physical pixel at '..screenHeight..'p / scale '..scale)
+  end
+ end
+end
+end
+-- Preserve a valid pixel conversion during a transient display-size transition.
+local beforeTransition=U.Style.Pixel(UIParent)
+physicalHeight=0; eq(U.Style.Pixel(UIParent),beforeTransition)
+physicalHeight=1080; UIParent.GetEffectiveScale=function() return .64 end
+-- Exercise the actual display-change event path: layout and positions both re-snap.
+for _,f in ipairs(frames) do if f.events.DISPLAY_SIZE_CHANGED then f.scripts.OnEvent(f,'DISPLAY_SIZE_CHANGED'); break end end
+local px=U.Style.Pixel(UIParent)
+check(math.abs(px-(768/1080)/.64)<.000001)
+for _,f in ipairs(frames) do
+ if f.kind=='kick' or f.kind=='stop' then
+  check(math.abs(f.point[5]/px-roundPixel(f.point[5]/px))<.000001)
+  f.mover.scripts.OnDragStop(f.mover)
+  check(math.abs(U.db.positions[f.kind].x/px-roundPixel(U.db.positions[f.kind].x/px))<.000001)
+  check(math.abs(U.db.positions[f.kind].y/px-roundPixel(U.db.positions[f.kind].y/px))<.000001)
+ end
+end
 print('PASS: '..count..' assertions; Lua 5.1 model, event, macro, UI and timer tests')

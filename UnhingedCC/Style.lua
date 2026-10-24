@@ -15,7 +15,15 @@ S.selected = {.19,.19,.18,1}
 S.tableHeader = {.16,.16,.15,1}
 S.tableText = {1,.98,.92,1}
 S.borders, S.fonts = {}, {}
-function S.Pixel(f) return 1/f:GetEffectiveScale() end
+local pixelToUI=1
+function S.Pixel(f)
+    -- Blizzard's PixelUtil uses 768 / physical screen height, not one UI unit.
+    if GetPhysicalScreenSize then
+        local _,height=GetPhysicalScreenSize()
+        if height and height>0 then pixelToUI=768/height end
+    end
+    return pixelToUI/f:GetEffectiveScale()
+end
 function S.Fill(f,color)
     f:SetBackdrop({bgFile=S.texture})
     f:SetBackdropColor(unpack(color or S.panel))

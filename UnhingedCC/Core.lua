@@ -32,7 +32,7 @@ events:SetScript('OnEvent',function(self,event,...)
         U.InitPresets(); U.db=db; U.Rebuild(); U.Roster()
         if migrated and not U.invalidSaved then U.Print('Tracking IDs are now generated automatically as PlayerKick / PlayerAbility. Recreate or edit macros that used custom or numeric IDs.') end
         self:UnregisterEvent('ADDON_LOADED')
-        for _,ev in ipairs({'UI_SCALE_CHANGED','GROUP_ROSTER_UPDATE','PLAYER_ENTERING_WORLD','CHAT_MSG_PARTY','CHAT_MSG_PARTY_LEADER','CHAT_MSG_INSTANCE_CHAT','CHAT_MSG_INSTANCE_CHAT_LEADER'}) do self:RegisterEvent(ev) end
+        for _,ev in ipairs({'DISPLAY_SIZE_CHANGED','UI_SCALE_CHANGED','GROUP_ROSTER_UPDATE','PLAYER_ENTERING_WORLD','CHAT_MSG_PARTY','CHAT_MSG_PARTY_LEADER','CHAT_MSG_INSTANCE_CHAT','CHAT_MSG_INSTANCE_CHAT_LEADER'}) do self:RegisterEvent(ev) end
         SLASH_UNHINGEDCC1='/ucc'; SLASH_UNHINGEDCC2='/unhingedcc'
         SlashCmdList.UNHINGEDCC=function(cmd)
             if cmd=='lock' or cmd=='unlock' then U.db.locked=cmd=='lock'; U.RefreshDisplay()
@@ -40,7 +40,7 @@ events:SetScript('OnEvent',function(self,event,...)
             elseif cmd=='reset' then for _,e in pairs(U.entries) do e.expires=0 end; U.RefreshDisplay()
             else U.OpenConfig() end
         end
-    elseif event=='UI_SCALE_CHANGED' then U.RefreshDisplay(); U.Style.RefreshBorders(); if U.RefreshConfigLines then U.RefreshConfigLines() end
+    elseif event=='UI_SCALE_CHANGED' or event=='DISPLAY_SIZE_CHANGED' then U.RefreshDisplay(); U.RestoreDisplayPositions(); U.Style.RefreshBorders(); if U.RefreshConfigLines then U.RefreshConfigLines() end
     elseif event=='GROUP_ROSTER_UPDATE' or event=='PLAYER_ENTERING_WORLD' then U.Roster(); if event=='PLAYER_ENTERING_WORLD' then U.Style.RefreshFonts() end
     else
         local message,sender=...
