@@ -1,6 +1,6 @@
 # UnhingedCC
 
-A lightweight World of Warcraft **Retail 12.1.5** addon for manually announced party interrupts and crowd control. Version 0.4.0; Interface 120105. No runtime dependencies or bundled libraries.
+A lightweight World of Warcraft **Retail 12.1.5** addon for manually announced party interrupts and crowd control. Version 0.4.1; Interface 120105. No runtime dependencies or bundled libraries.
 
 ## Install
 
@@ -45,7 +45,7 @@ Click **Save Preset** at the bottom of either page, enter a name and choose Save
 
 Click a preset and choose **Yes** to replace the current configuration, or **No** to cancel. Loading resets active timers and immediately restores its bar positions. Changes to the current setup do not alter a saved preset. Exports still share the current setup, rather than the preset library.
 
-**Reset All**, on Party Setup, asks for confirmation before clearing the current party setup, priorities, cooldown overrides and timers, returning the bars to their default positions and locking them. Saved presets and existing macros are kept. Cancel leaves the current configuration unchanged. `/ucc reset` continues to clear timers only.
+**Reset All**, on Party Setup, asks for confirmation before clearing the current party setup, priorities, cooldown overrides and timers. Bar positions and lock state are preserved, along with saved presets and existing macros. Cancel leaves the current configuration unchanged. `/ucc reset` continues to clear timers only.
 
 Names containing realms, such as `Angeels-TarrenMill`, produce chat IDs without the suffix: `AngeelsVoidNova`. The full name is still used for sender validation.
 
@@ -86,4 +86,4 @@ Tests execute the actual addon Lua in Lua 5.1 via Lupa, including model/config v
 
 Before use: enable script errors (`/console scriptErrors 1`), configure two real party members, test announcements from each, reject spoofed/partial messages, verify cooldown/priority transitions, drag/lock both groups, import/export and reload. Repeat in a dungeon during combat and check `/ucc status`. Test premade party and instance groups separately. Verify macros when casts fail, as those still announce. Run alongside your usual addons and check CPU/memory in game.
 
-To package: `python tools/package.py` creates `dist/UnhingedCC-0.4.0.zip` containing only the installable addon folder.
+To package: `python tools/package.py` creates `dist/UnhingedCC-0.4.1.zip` containing only the installable addon folder.

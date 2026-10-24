@@ -286,7 +286,7 @@ eq(U.Trigger(realmConfig.players[1],2),'AngeelsVoidNova')
 -- Preset save/cancel/load/replace/reset all use the same confirmation popup.
 local snapshot=U.NewConfig(); snapshot.players[1].name='Brick-Realm'; snapshot.players[1].slots[1].spell=183752
 snapshot.players[1].slots[2].spell=1234195; snapshot.players[1].slots[2].override=33
-snapshot.positions.kick={x=321,y=432}; snapshot.locked=false
+snapshot.positions.kick={x=321,y=432}; snapshot.positions.stop={x=567,y=678}; snapshot.locked=false
 check(U.Commit(snapshot)); U.RestoreDisplayPositions(); U.OpenConfig(); click('Party Setup')
 local beforeSave=U.Export(U.db)
 click('Save Preset')
@@ -306,7 +306,19 @@ local changedAgain=assert(U.Validate(U.db)); changedAgain.players[1].slots[2].ov
 click('Save Preset'); popup.input:SetText('dungeon'); click('Save'); click('No'); eq(U.presets.Dungeon.players[1].slots[2].override,33)
 click('Save Preset'); popup.input:SetText('Dungeon'); click('Save'); click('Yes'); eq(U.presets.Dungeon.players[1].slots[2].override,40)
 click('Reset All'); click('Cancel'); eq(U.db.players[1].name,'Brick-Realm')
-click('Reset All'); click('Reset'); eq(U.db.players[1].name,''); eq(U.db.locked,true); eq(U.db.positions.kick,nil)
+local anchors={}
+for _,f in ipairs(frames) do if f.kind=='kick' or f.kind=='stop' then anchors[f]=f.point end end
+click('Reset All'); click('Reset'); eq(U.db.players[1].name,''); eq(U.db.locked,false)
+eq(U.db.positions.kick.x,321); eq(U.db.positions.kick.y,432)
+eq(U.db.positions.stop.x,567); eq(U.db.positions.stop.y,678)
+for f,point in pairs(anchors) do eq(f.point,point,'reset does not reanchor bars') end
+for p,player in ipairs(U.db.players) do
+ eq(player.name,'')
+ for slot,a in ipairs(player.slots) do
+  eq(a.spell,0); eq(a.priority,(p-1)*5+slot); eq(a.override,nil)
+ end
+end
+check(next(U.entries)==nil,'reset clears removed assignments and active timers')
 check(U.presets.Dungeon,'reset retains saved presets')
 click('Dungeon'); click('Yes'); eq(U.db.players[1].name,'Brick-Realm'); eq(U.db.players[1].slots[2].override,40)
 U.InitPresets(); check(U.presets.Dungeon,'presets survive SavedVariables initialization')

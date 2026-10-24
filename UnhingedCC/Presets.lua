@@ -41,5 +41,9 @@ function U.LoadPreset(name)
     return U.ApplyConfig(config)
 end
 function U.ResetConfig()
-    return U.ApplyConfig(U.NewConfig())
+    local config=U.NewConfig()
+    config.positions=U.db.positions
+    config.locked=U.db.locked
+    U.entries={}
+    return U.Commit(config)
 end

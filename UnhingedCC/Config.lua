@@ -368,14 +368,14 @@ function U.OpenConfig()
         window.presetScroll=S.Scroll(side); window.presetScroll:SetPoint('TOPLEFT',12,-420); window.presetScroll:SetSize(186,218)
         window.presetContent=CreateFrame('Frame',nil,window.presetScroll); window.presetContent:SetSize(180,1); window.presetScroll:SetScrollChild(window.presetContent)
         window.presetButtons={}
-        label(side,'0.4.0',20,-651)
+        label(side,'0.4.1',20,-651)
         window.heading=label(window,'',240,-50,'GameFontNormalLarge')
         window.description=label(window,'',240,-80)
         local line=window:CreateTexture(nil,'ARTWORK'); line:SetColorTexture(unpack(S.border)); line:SetSize(874,1/window:GetEffectiveScale()); line:SetPoint('TOPLEFT',240,-106)
         window.scroll=S.Scroll(window); window.scroll:SetPoint('TOPLEFT',226,-130); window.scroll:SetSize(895,505)
         button(window,'Save Preset',976,-658,142,savePreset)
         window.reset=button(window,'Reset All',242,-658,120,function()
-            prompt('Reset setup','Reset party members, abilities, priorities, cooldowns and bar positions? Saved presets and macros will be kept.',{button='Reset',cancel='Cancel',accept=function()
+            prompt('Reset setup','Reset party members, abilities, priorities and cooldown settings? Bar positions, lock state, saved presets and macros will be kept.',{button='Reset',cancel='Cancel',accept=function()
                 local ok,err=U.ResetConfig(); if ok then U.RenderConfig() end
                 return ok,err
             end})
