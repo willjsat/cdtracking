@@ -52,3 +52,29 @@ spell_id	name	class	kind	baseline_seconds	source
 351338	Quell	EVOKER	kick	20	https://nether.wowhead.com/tooltip/spell/351338
 357214	Wing Buffet	EVOKER	stop	180	https://nether.wowhead.com/tooltip/spell/357214
 368970	Tail Swipe	EVOKER	stop	180	https://nether.wowhead.com/tooltip/spell/368970
+1234195	Void Nova	DEMONHUNTER	stop	45	https://nether.wowhead.com/tooltip/spell/1234195
+207684	Sigil of Misery	DEMONHUNTER	stop	120	https://nether.wowhead.com/tooltip/spell/207684
+202138	Sigil of Chains	DEMONHUNTER	stop	60	https://nether.wowhead.com/tooltip/spell/202138
+386071	Disrupting Shout	WARRIOR	kick	90	https://nether.wowhead.com/tooltip/spell/386071
+89766	Axe Toss	WARLOCK	kick	30	https://nether.wowhead.com/tooltip/spell/89766
+132409	Spell Lock	WARLOCK	kick	24	https://nether.wowhead.com/tooltip/spell/132409
+31935	Avenger's Shield	PALADIN	kick	15	https://nether.wowhead.com/tooltip/spell/31935
+122	Frost Nova	MAGE	stop	30	https://nether.wowhead.com/tooltip/spell/122
+157997	Ice Nova	MAGE	stop	25	https://nether.wowhead.com/tooltip/spell/157997
+157980	Supernova	MAGE	stop	45	https://nether.wowhead.com/tooltip/spell/157980
+383121	Mass Polymorph	MAGE	stop	60	https://nether.wowhead.com/tooltip/spell/383121
+102359	Mass Entanglement	DRUID	stop	30	https://nether.wowhead.com/tooltip/spell/102359
+102793	Ursol's Vortex	DRUID	stop	60	https://nether.wowhead.com/tooltip/spell/102793
+213691	Scatter Shot	HUNTER	stop	30	https://nether.wowhead.com/tooltip/spell/213691
+162488	Steel Trap	HUNTER	stop	30	https://nether.wowhead.com/tooltip/spell/162488
+1776	Gouge	ROGUE	stop	25	https://nether.wowhead.com/tooltip/spell/1776
+207777	Dismantle	ROGUE	stop	45	https://nether.wowhead.com/tooltip/spell/207777
+47476	Strangulate	DEATHKNIGHT	stop	45	https://nether.wowhead.com/tooltip/spell/47476
+88625	Holy Word: Chastise	PRIEST	stop	60	https://nether.wowhead.com/tooltip/spell/88625
+205364	Dominate Mind	PRIEST	stop	30	https://nether.wowhead.com/tooltip/spell/205364
+358385	Landslide	EVOKER	stop	90	https://nether.wowhead.com/tooltip/spell/358385
+51485	Earthgrab Totem	SHAMAN	stop	30	https://nether.wowhead.com/tooltip/spell/51485
+20549	War Stomp	RACIAL	stop	90	https://nether.wowhead.com/tooltip/spell/20549
+107079	Quaking Palm	RACIAL	stop	120	https://nether.wowhead.com/tooltip/spell/107079
+287712	Haymaker	RACIAL	stop	150	https://nether.wowhead.com/tooltip/spell/287712
+255654	Bull Rush	RACIAL	stop	120	https://nether.wowhead.com/tooltip/spell/255654

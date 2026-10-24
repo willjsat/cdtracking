@@ -2,10 +2,11 @@
 ## Title: UnhingedCC
 ## Notes: Lightweight, macro-announced party kicks and stops.
 ## Author: willjsat
-## Version: 0.1.0
+## Version: 0.2.0
 ## SavedVariables: UnhingedCCDB
 Abilities.lua
 Model.lua
 Display.lua
+Style.lua
 Config.lua
 Core.lua

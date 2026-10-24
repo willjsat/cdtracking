@@ -5,7 +5,8 @@ root = Path(__file__).resolve().parents[1]
 lua = LuaRuntime(unpack_returned_tuples=True)
 lua.execute((root / 'tests/wow_mock.lua').read_text())
 namespace = lua.table()
-for file in ['Abilities.lua', 'Model.lua', 'Display.lua', 'Config.lua', 'Core.lua']:
+toc = (root / 'UnhingedCC/UnhingedCC.toc').read_text()
+for file in [line.strip() for line in toc.splitlines() if line.strip().endswith('.lua')]:
     lua.execute('return assert(loadstring(...))', (root / 'UnhingedCC' / file).read_text())('UnhingedCC', namespace)
 lua.globals().U = namespace
 lua.execute((root / 'tests/spec.lua').read_text())

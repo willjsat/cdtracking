@@ -1,5 +1,7 @@
 local _, U = ...
 local groups = {}
+local WIDTH, HEIGHT, ICON_GAP = 248 * .8, 22, 2
+local function pixel() return 1 / UIParent:GetEffectiveScale() end
 local texture = 'Interface\\Buttons\\WHITE8X8'
 local function color(e)
     local class = U.classes and U.classes[U.Name(e.player)] or e.ability.class
@@ -8,16 +10,20 @@ local function color(e)
 end
 local function makeGroup(kind, label, x)
     local f = CreateFrame('Frame',nil,UIParent,'BackdropTemplate')
-    f:SetSize(248,25); f:SetClampedToScreen(true); f:SetMovable(true)
-    f:SetBackdrop({bgFile=texture}); f:SetBackdropColor(.06,.06,.07,.85)
-    f.label=f:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
-    f.label:SetPoint('TOPLEFT',5,-4); f.label:SetText(label)
+    f:SetSize(WIDTH,HEIGHT); f:SetClampedToScreen(true); f:SetMovable(true)
     f.rows={}; f.kind=kind
-    f:EnableMouse(true); f:RegisterForDrag('LeftButton')
-    f:SetScript('OnDragStart',function(self) if not U.db.locked then self:StartMoving() end end)
-    f:SetScript('OnDragStop',function(self)
-        self:StopMovingOrSizing()
-        U.db.positions[kind]={x=self:GetLeft()-UIParent:GetLeft(),y=self:GetTop()-UIParent:GetBottom()}
+    -- An overlay is interactive only in unlock mode; no permanent header or padding.
+    f.mover=CreateFrame('Frame',nil,f,'BackdropTemplate'); f.mover:SetAllPoints()
+    f.mover:SetFrameLevel(f:GetFrameLevel()+10)
+    f.mover:SetBackdrop({bgFile=texture,edgeFile=texture,edgeSize=pixel()})
+    f.mover:SetBackdropColor(.07,.20,.19,.8); f.mover:SetBackdropBorderColor(.15,.85,.7,1)
+    f.mover.label=f.mover:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
+    f.mover.label:SetPoint('CENTER'); f.mover.label:SetText(label..' — drag')
+    f.mover:EnableMouse(true); f.mover:RegisterForDrag('LeftButton')
+    f.mover:SetScript('OnDragStart',function() if not U.db.locked then f:StartMoving() end end)
+    f.mover:SetScript('OnDragStop',function()
+        f:StopMovingOrSizing()
+        U.db.positions[kind]={x=f:GetLeft()-UIParent:GetLeft(),y=f:GetTop()-UIParent:GetBottom()}
     end)
     local pos=U.db.positions[kind]
     if pos then f:SetPoint('TOPLEFT',UIParent,'BOTTOMLEFT',pos.x,pos.y)
@@ -26,13 +32,13 @@ local function makeGroup(kind, label, x)
 end
 local function makeRow(parent, i)
     local row=CreateFrame('StatusBar',nil,parent)
-    row:SetSize(222,22); row:SetStatusBarTexture(texture)
-    row:SetPoint('TOPLEFT',26,-20-(i-1)*24)
+    row:SetSize(WIDTH-HEIGHT-ICON_GAP,HEIGHT); row:SetStatusBarTexture(texture)
+    row:SetPoint('TOPLEFT',HEIGHT+ICON_GAP,-(i-1)*(HEIGHT+pixel()))
     row.bg=row:CreateTexture(nil,'BACKGROUND'); row.bg:SetAllPoints(); row.bg:SetColorTexture(.09,.09,.10,.9)
     row.icon=row:CreateTexture(nil,'ARTWORK'); row.icon:SetSize(22,22); row.icon:SetPoint('RIGHT',row,'LEFT',-2,0)
     row.icon:SetTexCoord(.08,.92,.08,.92)
     row.name=row:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall'); row.name:SetPoint('LEFT',5,0)
-    row.name:SetWidth(162); row.name:SetJustifyH('LEFT')
+    row.name:SetWidth(WIDTH-HEIGHT-ICON_GAP-48); row.name:SetJustifyH('LEFT')
     row.time=row:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall'); row.time:SetPoint('RIGHT',-4,0)
     row:EnableMouse(true)
     row:SetScript('OnEnter',function(self)
@@ -75,12 +81,12 @@ function U.RefreshDisplay()
     local now,active=GetTime(),false
     for kind,f in pairs(groups) do
         local list=U.Order(kind,now)
-        f:EnableMouse(not U.db.locked)
-        f:SetHeight(math.max(44,20+#list*24))
-        f.label:SetText((kind=='kick' and 'Kicks' or 'Stops') .. (U.db.locked and '' or ' — drag to move'))
+        f.mover:SetShown(not U.db.locked)
+        f:SetHeight(math.max(HEIGHT,#list*HEIGHT+math.max(0,#list-1)*pixel()))
         f:SetShown(#list>0 or not U.db.locked)
         for i,e in ipairs(list) do
             local row=f.rows[i] or makeRow(f,i); f.rows[i]=row; row.entry=e
+            row:ClearAllPoints(); row:SetPoint('TOPLEFT',HEIGHT+ICON_GAP,-(i-1)*(HEIGHT+pixel()))
             row.icon:SetTexture(e.ability.icon); row.name:SetText(e.player:match('^[^-]+'))
             local c=color(e); row:SetStatusBarColor(c.r,c.g,c.b,.95)
             row:Show(); paint(row,now)

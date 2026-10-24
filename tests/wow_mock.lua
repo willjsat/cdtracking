@@ -14,6 +14,13 @@ function methods:SetWidth(w) self.width=w end
 function methods:SetHeight(h) self.height=h end
 function methods:SetPoint(...) self.point={...} end
 function methods:ClearAllPoints() self.point=nil end
+function methods:GetEffectiveScale() return 1 end
+function methods:GetFrameLevel() return 1 end
+function methods:GetWidth() return self.width or 1920 end
+function methods:GetHeight() return self.height or 1080 end
+function methods:SetVerticalScroll(n) self.scroll=n end
+function methods:GetVerticalScroll() return self.scroll or 0 end
+function methods:GetVerticalScrollRange() return 100 end
 function methods:GetLeft() return 100 end
 function methods:GetTop() return 200 end
 function methods:GetBottom() return 0 end

@@ -37,3 +37,13 @@ Cyclone and Sleep Walk returned no cooldown text and are omitted from this posit
 ## Validation boundary
 
 The Lua 5.1 suite runs the actual addon source with mocked frame, spell, roster and macro APIs. It verifies parsing, identity matching, ordering, config safety, UI callbacks, pooling and timer shutdown. Only a real Retail client can verify rendering, protected-action restrictions, taint interactions, macro message delivery and availability of readable announcements in combat. See README for that test sequence.
+
+## 0.2.0 expansion and observed behaviour
+
+The user reports the original chat-based cooldown tracking works in their in-game tests. The secret-value guards remain in place for contexts where message payloads are restricted.
+
+Expanded the catalog by 26 positive-cooldown entries (79 total), using the same verified HTTPS Retail tooltip endpoint and primary baseline cooldown field. Source links and values are in `cooldowns.tsv`. Entries include additional interrupts, roots, displacements, PvP talents and racials; tooltip notes explain important restrictions. The Earthgrab aura (64695) has no cooldown and is not added; the actual cast, Earthgrab Totem (51485), has a 30-second baseline and is added.
+
+Devourer was checked against Wowhead's [Devourer talent list](https://www.wowhead.com/spells/talents/demon-hunter/devourer) and [class ability list](https://www.wowhead.com/spells/abilities/demon-hunter/devourer). The talent list identifies **Void Nova (1234195)** with specialization **1480**, and its [Retail tooltip](https://nether.wowhead.com/tooltip/spell/1234195) reports **45 seconds**, an eruption that stuns the target and nearby enemies. The class ability list identifies **Disrupt (183752)** as the shared interrupt. Void Nova is a distinct selectable entry; it is not aliased to Chaos Nova. Its default message is `PlayerVoidNova`; the shared kick uses `PlayerKick`.
+
+The new appearance uses custom solid-colour panels, borders and buttons without native gradient button/input skins. A searchable icon grid replaces the old text dropdown. The setup window uses a sidebar and per-player icon strips. Tracker headers and their padding are removed; only temporary unlock overlays remain. Row gaps are calculated in physical pixels using UIParent's effective scale.
