@@ -14,10 +14,42 @@ function U.NewConfig()
     for p = 1, 5 do
         c.players[p] = {name = '', slots = {}}
         for s = 1, 5 do
-            c.players[p].slots[s] = {spell = 0, priority = (p-1)*5+s}
+            c.players[p].slots[s] = {spell = 0, priority = s==1 and p or (p-1)*4+s-1}
         end
     end
     return c
+end
+-- Assignment changes number each queue independently, retaining its relative order.
+-- Direct edits to priority inputs remain untouched until an assignment changes.
+function U.AssignAbility(config,p,s,spell)
+    local player=config.players[p]
+    local slot=player and player.slots[s]
+    local ability=U.Abilities[spell]
+    local kind=s==1 and 'kick' or 'stop'
+    if not slot or (spell~=0 and (not ability or ability.kind~=kind)) then return nil,'Invalid ability for slot.' end
+    if slot.spell==spell then return true end
+    if slot.spell==0 and spell~=0 then
+        local last=0
+        for _,member in ipairs(config.players) do
+            for _,a in ipairs(member.slots) do
+                if U.Abilities[a.spell] and U.Abilities[a.spell].kind==kind then last=math.max(last,a.priority) end
+            end
+        end
+        slot.priority=last+1
+    end
+    slot.spell=spell; slot.override=nil
+    local list={}
+    for pi,member in ipairs(config.players) do
+        for si,a in ipairs(member.slots) do
+            if U.Abilities[a.spell] and U.Abilities[a.spell].kind==kind then list[#list+1]={slot=a,key=pi*5+si} end
+        end
+    end
+    sort(list,function(a,b)
+        if a.slot.priority==b.slot.priority then return a.key<b.key end
+        return a.slot.priority<b.slot.priority
+    end)
+    for i,item in ipairs(list) do item.slot.priority=i end
+    return true
 end
 -- Stable English tokens make macros readable across client locales and slot moves.
 function U.DefaultTrigger(player, spell)

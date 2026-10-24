@@ -83,7 +83,7 @@ click('Prioritisation')
 local input
 for i=#frames,1,-1 do
  local f=frames[i]
- if f.kind=='EditBox' and f.text=='1' and f.scripts.OnTextChanged then input=f; break end
+ if f.kind=='EditBox' and f.playerIndex==1 and f.slotIndex==1 and f.scripts.OnTextChanged then input=f; break end
 end
 check(input,'priority input exists')
 input.text='50'; input.scripts.OnTextChanged(input,true)
@@ -315,7 +315,7 @@ for f,point in pairs(anchors) do eq(f.point,point,'reset does not reanchor bars'
 for p,player in ipairs(U.db.players) do
  eq(player.name,'')
  for slot,a in ipairs(player.slots) do
-  eq(a.spell,0); eq(a.priority,(p-1)*5+slot); eq(a.override,nil)
+  eq(a.spell,0); eq(a.priority,slot==1 and p or (p-1)*4+slot-1); eq(a.override,nil)
  end
 end
 check(next(U.entries)==nil,'reset clears removed assignments and active timers')
@@ -362,4 +362,40 @@ click('Create')
 local reported=false
 for _,f in ipairs(frames) do if f.kind=='FontString' and f.text and f.text:find('verify',1,true) then reported=true end end
 check(reported,'macro failure is visible in settings')
+-- New assignments use independent queues even with sparse players and slots.
+local queues=U.NewConfig()
+check(U.AssignAbility(queues,1,1,183752)); eq(queues.players[1].slots[1].priority,1)
+check(U.AssignAbility(queues,1,2,179057)); eq(queues.players[1].slots[2].priority,1)
+check(U.AssignAbility(queues,3,1,2139)); eq(queues.players[3].slots[1].priority,2)
+check(U.AssignAbility(queues,1,4,217832)); eq(queues.players[1].slots[4].priority,2)
+check(U.AssignAbility(queues,4,3,115750)); eq(queues.players[4].slots[3].priority,3)
+check(U.AssignAbility(queues,5,1,96231)); eq(queues.players[5].slots[1].priority,3)
+-- Replacement keeps its order; removal compacts only that category.
+check(U.AssignAbility(queues,3,1,1766)); eq(queues.players[3].slots[1].priority,2)
+check(U.AssignAbility(queues,1,1,0)); eq(queues.players[3].slots[1].priority,1); eq(queues.players[5].slots[1].priority,2)
+eq(queues.players[4].slots[3].priority,3,'kick removal leaves stop priorities alone')
+check(U.AssignAbility(queues,1,2,0)); eq(queues.players[1].slots[4].priority,1); eq(queues.players[4].slots[3].priority,2)
+eq(queues.players[5].slots[1].priority,2,'stop removal leaves kick priorities alone')
+check(U.AssignAbility(queues,2,1,6552)); eq(queues.players[2].slots[1].priority,3,'new kick appends')
+check(not U.AssignAbility(queues,2,1,179057),'cannot put a stop in the kick slot')
+-- Explicit ordering survives assignment changes; labels are compacted in that order.
+queues.players[3].slots[1].priority=99
+check(U.AssignAbility(queues,1,1,183752))
+eq(queues.players[5].slots[1].priority,1); eq(queues.players[2].slots[1].priority,2)
+eq(queues.players[3].slots[1].priority,3); eq(queues.players[1].slots[1].priority,4)
+-- The actual picker uses the assignment function, rather than slot-based defaults.
+U.Commit(U.NewConfig()); U.OpenConfig(); click('Party Setup')
+clickSlot(1,1); click('Demon Hunter'); click('Demon Hunter'); click('Disrupt')
+eq(U.db.players[1].slots[1].priority,1)
+clickSlot(1,2); click('Void Nova'); eq(U.db.players[1].slots[2].priority,1)
+clickSlot(3,1); click('Disrupt'); eq(U.db.players[3].slots[1].priority,2)
+clickSlot(4,5); click('Imprison'); eq(U.db.players[4].slots[5].priority,2)
+clickSlot(1,2); click('Clear slot'); eq(U.db.players[4].slots[5].priority,1)
+eq(U.db.players[3].slots[1].priority,2)
+-- Screenshot-inspired palette and panel structure, with existing controls retained.
+check(U.Style.bg[1]>U.Style.bg[3],'warm dark background')
+eq(U.Style.gold[1],1); eq(U.Style.gold[2],.82); eq(U.Style.gold[3],0)
+eq(options.titleBar.title:GetText(),'UnhingedCC')
+check(options.side and options.presetContent and options.reset)
+click('Prioritisation'); check(saveButton:IsShown())
 print('PASS: '..count..' assertions; Lua 5.1 model, event, macro, UI and timer tests')

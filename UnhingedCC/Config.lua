@@ -29,7 +29,7 @@ local function region(parent,kind,font)
     r:SetParent(parent); r:ClearAllPoints(); r:Show(); return r
 end
 local function label(parent,text,x,y,font)
-    local l=region(parent,'font',font or 'GameFontHighlightSmall'); S.Font(l,font); l:SetTextColor(.8,.83,.88)
+    local l=region(parent,'font',font or 'GameFontHighlightSmall'); S.Font(l,font); l:SetTextColor(unpack(S.text))
     l:SetPoint('TOPLEFT',x,y); l:SetText(text); return l
 end
 local function button(parent,text,x,y,w,fn)
@@ -146,10 +146,10 @@ local function abilityTooltip(b,a,extra)
         if enter then enter(self) end
         GameTooltip:SetOwner(self,'ANCHOR_RIGHT'); GameTooltip:SetText(a and a.name or 'Add ability')
         if a then
-            GameTooltip:AddLine(a.class..' • '..a.cooldown..' sec baseline',.8,.83,.88)
-            if a.note then GameTooltip:AddLine(a.note,.50,.65,1,true) end
+            GameTooltip:AddLine(a.class..' • '..a.cooldown..' sec baseline',unpack(S.text,1,3))
+            if a.note then GameTooltip:AddLine(a.note,1,.82,0,true) end
         end
-        if extra then GameTooltip:AddLine(extra,.7,.73,.78,true) end
+        if extra then GameTooltip:AddLine(extra,.7,.68,.63,true) end
         GameTooltip:Show()
     end)
     b:SetScript('OnLeave',function(self) if leave then leave(self) end; GameTooltip:Hide() end)
@@ -170,7 +170,7 @@ local function renderPicker()
     for i,item in ipairs(list) do
         local a=item.ability
         local b=button(content,a.name,((i-1)%3)*136,-math.floor((i-1)/3)*38,132,function()
-            local ok=change(function(c) c.players[picker.player].slots[picker.slot].spell=item.id; c.players[picker.player].slots[picker.slot].override=nil end)
+            local ok=change(function(c) U.AssignAbility(c,picker.player,picker.slot,item.id) end)
             if ok then picker:Hide(); U.RenderConfig() end
         end)
         b:SetHeight(34); b.abilityID=item.id
@@ -194,7 +194,7 @@ local function chooseAbility(anchor,p,s)
         picker.content=CreateFrame('Frame',nil,picker.scroll); picker.content:SetSize(408,1); picker.scroll:SetScrollChild(picker.content)
         picker.pool={frames={},regions={},counts={}}
         button(picker,'Clear slot',16,-394,100,function()
-            if change(function(c) c.players[picker.player].slots[picker.slot].spell=0; c.players[picker.player].slots[picker.slot].override=nil end) then picker:Hide(); U.RenderConfig() end
+            if change(function(c) U.AssignAbility(c,picker.player,picker.slot,0) end) then picker:Hide(); U.RenderConfig() end
         end)
         label(picker,'Search abilities',16,-71)
         local classes={{'All classes',false},{'Death Knight','DEATHKNIGHT'},{'Demon Hunter','DEMONHUNTER'},{'Druid','DRUID'},{'Evoker','EVOKER'},{'Hunter','HUNTER'},{'Mage','MAGE'},{'Monk','MONK'},{'Paladin','PALADIN'},{'Priest','PRIEST'},{'Rogue','ROGUE'},{'Shaman','SHAMAN'},{'Warlock','WARLOCK'},{'Warrior','WARRIOR'},{'Racial','RACIAL'}}
@@ -213,13 +213,13 @@ local function chooseAbility(anchor,p,s)
     picker.search:SetText(''); renderPicker(); picker:Show(); picker.search:SetFocus()
 end
 local function party()
-    label(body,'Party members',20,-5,'GameFontNormalSmall')
-    label(body,'Kick',341,-5,'GameFontNormalSmall')
-    label(body,'Crowd control',420,-5,'GameFontNormalSmall')
+    label(body,'Party members',20,-5,'GameFontNormalSmall'):SetTextColor(unpack(S.gold))
+    label(body,'Kick',341,-5,'GameFontNormalSmall'):SetTextColor(unpack(S.gold))
+    label(body,'Crowd control',420,-5,'GameFontNormalSmall'):SetTextColor(unpack(S.gold))
     for p=1,5 do
         local player=U.db.players[p]; local y=-31-(p-1)*84
         local card=frame('Frame',nil,body,'BackdropTemplate'); card:SetSize(862,74); card:SetPoint('TOPLEFT',12,y); S.Panel(card)
-        label(card,tostring(p),18,-27,'GameFontHighlightSmall'):SetTextColor(.5,.58,.75)
+        label(card,tostring(p),18,-27,'GameFontHighlightSmall'):SetTextColor(unpack(S.muted))
         label(card,'Character',52,-10,'GameFontNormalSmall')
         local name=edit(card,52,-33,230,player.name); name:SetMaxLetters(80)
         name:SetScript('OnEditFocusLost',function(self)
@@ -276,21 +276,22 @@ end
 local function priorities()
     priorityRows={}; body.headings={}; body.playerHeadings={}; body.columns={}
     for _,kind in ipairs({'kick','stop'}) do
-        body.headings[kind]=label(body,kind=='kick' and 'Kicks' or 'Stops',0,0,'GameFontNormalLarge')
+        local section=frame('Frame',nil,body,'BackdropTemplate'); section:SetSize(862,24); S.Fill(section,S.section); body.headings[kind]=section
+        label(section,kind=='kick' and 'Kicks' or 'Stops',12,-4,'GameFontNormal'):SetTextColor(unpack(S.gold))
         local h=frame('Frame',nil,body); h:SetSize(862,20); body.columns[kind]=h
         label(h,'Order',8,-2); label(h,'Player / ability',92,-2); label(h,'Chat ID',320,-2)
         label(h,'Cooldown (s)',560,-2); label(h,'Macro',680,-2)
     end
     for p=1,5 do
         local player=U.db.players[p]
-        body.playerHeadings[p]=label(body,player.name,0,0,'GameFontNormal')
+        body.playerHeadings[p]=label(body,player.name,0,0,'GameFontNormal'); body.playerHeadings[p]:SetTextColor(unpack(S.gold))
         local hasStops=false
         for s=1,5 do
             local slot=player.slots[s]; local a=U.Abilities[slot.spell]
             if a then
                 if s>1 then hasStops=true end
                 local r=frame('Frame',nil,body,'BackdropTemplate'); S.Panel(r); r:SetSize(862,44); priorityRows[p..':'..s]=r
-                local pr=edit(r,8,-10,36,tostring(slot.priority),true)
+                local pr=edit(r,8,-10,36,tostring(slot.priority),true); pr.playerIndex=p; pr.slotIndex=s
                 pr:SetScript('OnTextChanged',function(self,user)
                     local n=tonumber(self:GetText())
                     if user and n and n>=1 and n<=999 then
@@ -300,7 +301,7 @@ local function priorities()
                 pr:SetScript('OnEditFocusLost',function(self) self:SetText(U.db.players[p].slots[s].priority) end)
                 local icon=region(r,'texture'); icon:SetSize(28,28); icon:SetPoint('TOPLEFT',56,-8); icon:SetTexture(a.icon)
                 local title=label(r,s==1 and player.name or a.name,92,s==1 and -6 or -14); title:SetWidth(215); title:SetJustifyH('LEFT')
-                if s==1 then label(r,a.name,92,-24):SetTextColor(.5,.6,.8) end
+                if s==1 then label(r,a.name,92,-24):SetTextColor(unpack(S.muted)) end
                 local tr=label(r,U.Trigger(player,s),320,-14); tr:SetWidth(226); tr:SetJustifyH('LEFT')
                 local cd=edit(r,560,-10,64,tostring(slot.override or a.cooldown)); cd:SetMaxLetters(8)
                 cd:SetScript('OnEditFocusLost',function(self)
@@ -335,7 +336,7 @@ function U.RenderConfig()
     lock:SetText(U.db.locked and 'Unlock Bars' or 'Lock Bars')
     window.heading:SetText(tab==1 and 'Party Setup' or 'Prioritisation')
     window.description:SetText(tab==1 and 'Party members and abilities' or 'Lower numbers take priority. Leave cooldowns blank to use the default.')
-    for i,b in ipairs(window.tabs) do b.selected=i==tab; S.Panel(b,b.selected and S.selected or nil,b.selected and S.accent or nil) end
+    for i,b in ipairs(window.tabs) do b.selected=i==tab; S.Panel(b,b.selected and S.selected or nil,S.border) end
     if tab==1 then party() else priorities() end
     activePool=nil
     window.reset:SetShown(tab==1); refreshPresets()
@@ -349,28 +350,28 @@ function U.OpenConfig()
         S.Panel(window,S.bg)
         window:SetScript('OnHide',function() if promptFrame then promptFrame:Hide() end; if picker then picker:Hide() end; if dialog then dialog:Hide() end end)
         tinsert(UISpecialFrames,'UnhingedCCOptions')
-        local side=CreateFrame('Frame',nil,window,'BackdropTemplate'); side:SetSize(210,686); side:SetPoint('TOPLEFT',1,-32); S.Fill(side,{.035,.045,.085,1})
+        local side=CreateFrame('Frame',nil,window,'BackdropTemplate'); side:SetSize(210,686); side:SetPoint('TOPLEFT',1,-32); S.Fill(side,S.sidebar)
         local divider=side:CreateTexture(nil,'OVERLAY'); divider:SetColorTexture(unpack(S.border)); divider:SetWidth(S.Pixel(side)); divider:SetPoint('TOPRIGHT'); divider:SetPoint('BOTTOMRIGHT')
         window.side=side; window.divider=divider
-        label(side,'Settings',20,-28,'GameFontNormalLarge')
+        label(side,'Settings',20,-28,'GameFontNormalLarge'):SetTextColor(unpack(S.gold))
         window.tabs={
             button(side,'Party Setup',12,-80,186,function() tab=1; U.RenderConfig() end),
-            button(side,'Prioritisation',12,-120,186,function() tab=2; U.RenderConfig() end),
+            button(side,'Prioritisation',12,-108,186,function() tab=2; U.RenderConfig() end),
         }
-        for _,b in ipairs(window.tabs) do b:SetHeight(34) end
-        label(side,'Display',20,-205,'GameFontNormalSmall')
+        for _,b in ipairs(window.tabs) do b:SetHeight(28) end
+        label(side,'Display',20,-205,'GameFontNormalSmall'):SetTextColor(unpack(S.gold))
         lock=button(side,'Unlock Bars',12,-235,186,function() U.db.locked=not U.db.locked; U.RefreshDisplay(); lock:SetText(U.db.locked and 'Unlock Bars' or 'Lock Bars') end)
         lock:SetHeight(32)
-        label(side,'Share',20,-315,'GameFontNormalSmall')
+        label(side,'Share',20,-315,'GameFontNormalSmall'):SetTextColor(unpack(S.gold))
         button(side,'Export',12,-345,88,function() textDialog('Export UnhingedCC config',U.Export(U.db)) end)
         button(side,'Import',110,-345,88,function() textDialog('Import UnhingedCC config','',true) end)
-        label(side,'Presets',20,-394,'GameFontNormalSmall')
+        label(side,'Presets',20,-394,'GameFontNormalSmall'):SetTextColor(unpack(S.gold))
         window.presetScroll=S.Scroll(side); window.presetScroll:SetPoint('TOPLEFT',12,-420); window.presetScroll:SetSize(186,218)
         window.presetContent=CreateFrame('Frame',nil,window.presetScroll); window.presetContent:SetSize(180,1); window.presetScroll:SetScrollChild(window.presetContent)
         window.presetButtons={}
-        label(side,'0.4.1',20,-651)
-        window.heading=label(window,'',240,-50,'GameFontNormalLarge')
-        window.description=label(window,'',240,-80)
+        label(side,'0.5.0',20,-651)
+        window.heading=label(window,'',240,-50,'GameFontNormalLarge'); window.heading:SetTextColor(unpack(S.gold))
+        window.description=label(window,'',240,-80); window.description:SetTextColor(unpack(S.muted))
         local line=window:CreateTexture(nil,'ARTWORK'); line:SetColorTexture(unpack(S.border)); line:SetSize(874,1/window:GetEffectiveScale()); line:SetPoint('TOPLEFT',240,-106)
         window.scroll=S.Scroll(window); window.scroll:SetPoint('TOPLEFT',226,-130); window.scroll:SetSize(895,505)
         button(window,'Save Preset',976,-658,142,savePreset)

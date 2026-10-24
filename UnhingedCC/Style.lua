@@ -1,11 +1,17 @@
 local _, U = ...
 local S = {}; U.Style = S
 S.texture = 'Interface\\Buttons\\WHITE8X8'
-S.bg = {.025,.035,.065,1}
-S.panel = {.045,.065,.115,1}
-S.border = {.16,.22,.38,1}
-S.accent = {.46,.36,.94,1}
-S.selected = {.10,.13,.25,1}
+S.bg = {.065,.058,.047,1}
+S.panel = {.095,.090,.080,1}
+S.border = {.23,.23,.22,1}
+S.accent = {.55,.48,.28,1}
+S.gold = {1,.82,0,1}
+S.text = {.94,.92,.87,1}
+S.muted = {.58,.56,.51,1}
+S.header = {.035,.032,.027,1}
+S.sidebar = {.075,.070,.062,1}
+S.section = {.13,.115,.085,1}
+S.selected = {.19,.19,.18,1}
 S.borders, S.fonts = {}, {}
 function S.Pixel(f) return 1/f:GetEffectiveScale() end
 function S.Fill(f,color)
@@ -60,12 +66,12 @@ function S.Button(f)
         f.caption=f:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
         f.caption:SetPoint('CENTER'); f:SetFontString(f.caption)
     end
-    S.Font(f.caption); f.caption:SetTextColor(.83,.85,.89)
-    f:SetScript('OnEnter',function(self) S.Panel(self,{.10,.15,.27,1},S.accent) end)
-    f:SetScript('OnLeave',function(self) S.Panel(self,self.selected and S.selected or nil,self.selected and S.accent or nil) end)
+    S.Font(f.caption); f.caption:SetTextColor(unpack(S.text))
+    f:SetScript('OnEnter',function(self) S.Panel(self,{.15,.14,.12,1},S.accent); self.caption:SetTextColor(unpack(S.gold)) end)
+    f:SetScript('OnLeave',function(self) S.Panel(self,self.selected and S.selected or nil,S.border); self.caption:SetTextColor(unpack(S.text)) end)
 end
 function S.Input(f)
-    S.Panel(f,{.025,.035,.06,1}); S.Font(f); f:SetTextInsets(8,8,0,0)
+    S.Panel(f,{.025,.024,.021,1}); S.Font(f); f:SetTextInsets(8,8,0,0)
 end
 function S.Scroll(parent)
     local f=CreateFrame('ScrollFrame',nil,parent)
@@ -78,12 +84,12 @@ end
 function S.TitleBar(owner,text)
     owner:SetMovable(true)
     local bar=CreateFrame('Frame',nil,owner,'BackdropTemplate')
-    bar:SetPoint('TOPLEFT'); bar:SetSize(owner:GetWidth(),30); S.Fill(bar,{.075,.09,.18,1})
+    bar:SetPoint('TOPLEFT'); bar:SetSize(owner:GetWidth(),30); S.Fill(bar,S.header)
     bar:EnableMouse(true); bar:RegisterForDrag('LeftButton')
     bar:SetScript('OnDragStart',function() owner:StartMoving() end)
     bar:SetScript('OnDragStop',function() owner:StopMovingOrSizing() end)
     bar.title=bar:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall'); S.Font(bar.title)
-    bar.title:SetPoint('LEFT',10,0); bar.title:SetText(text)
+    bar.title:SetPoint('CENTER'); bar.title:SetTextColor(unpack(S.gold)); bar.title:SetText(text)
     local close=CreateFrame('Button',nil,bar,'BackdropTemplate'); close:SetSize(40,30); close:SetPoint('TOPRIGHT')
     S.Button(close); close:SetText('X'); S.Fill(close,{.55,.08,.13,1})
     close:SetScript('OnEnter',function(self) S.Fill(self,{.8,.12,.18,1}) end)

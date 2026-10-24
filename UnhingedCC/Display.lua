@@ -15,7 +15,7 @@ local function makeGroup(kind, label, x)
     -- An overlay is interactive only in unlock mode; no permanent header or padding.
     f.mover=CreateFrame('Frame',nil,f,'BackdropTemplate'); f.mover:SetAllPoints()
     f.mover:SetFrameLevel(f:GetFrameLevel()+10)
-    U.Style.Panel(f.mover,{.07,.10,.19,.8},U.Style.accent)
+    U.Style.Panel(f.mover,{.10,.09,.07,.8},U.Style.accent)
     f.mover.label=f.mover:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
     U.Style.Font(f.mover.label,'GameFontNormalSmall'); f.mover.label:SetPoint('CENTER'); f.mover.label:SetText(label..' — drag')
     f.mover:EnableMouse(true); f.mover:RegisterForDrag('LeftButton')
