@@ -1,0 +1,54 @@
+spell_id	name	class	kind	baseline_seconds	source
+1766	Kick	ROGUE	kick	15	https://nether.wowhead.com/tooltip/spell/1766
+408	Kidney Shot	ROGUE	stop	30	https://nether.wowhead.com/tooltip/spell/408
+2094	Blind	ROGUE	stop	120	https://nether.wowhead.com/tooltip/spell/2094
+2139	Counterspell	MAGE	kick	25	https://nether.wowhead.com/tooltip/spell/2139
+31661	Dragon's Breath	MAGE	stop	45	https://nether.wowhead.com/tooltip/spell/31661
+157981	Blast Wave	MAGE	stop	30	https://nether.wowhead.com/tooltip/spell/157981
+6552	Pummel	WARRIOR	kick	15	https://nether.wowhead.com/tooltip/spell/6552
+46968	Shockwave	WARRIOR	stop	40	https://nether.wowhead.com/tooltip/spell/46968
+107570	Storm Bolt	WARRIOR	stop	30	https://nether.wowhead.com/tooltip/spell/107570
+5246	Intimidating Shout	WARRIOR	stop	90	https://nether.wowhead.com/tooltip/spell/5246
+15487	Silence	PRIEST	kick	30	https://nether.wowhead.com/tooltip/spell/15487
+8122	Psychic Scream	PRIEST	stop	40	https://nether.wowhead.com/tooltip/spell/8122
+64044	Psychic Horror	PRIEST	stop	45	https://nether.wowhead.com/tooltip/spell/64044
+19647	Spell Lock	WARLOCK	kick	24	https://nether.wowhead.com/tooltip/spell/19647
+30283	Shadowfury	WARLOCK	stop	60	https://nether.wowhead.com/tooltip/spell/30283
+6789	Mortal Coil	WARLOCK	stop	45	https://nether.wowhead.com/tooltip/spell/6789
+5484	Howl of Terror	WARLOCK	stop	40	https://nether.wowhead.com/tooltip/spell/5484
+47528	Mind Freeze	DEATHKNIGHT	kick	15	https://nether.wowhead.com/tooltip/spell/47528
+221562	Asphyxiate	DEATHKNIGHT	stop	45	https://nether.wowhead.com/tooltip/spell/221562
+108194	Asphyxiate	DEATHKNIGHT	stop	45	https://nether.wowhead.com/tooltip/spell/108194
+49576	Death Grip	DEATHKNIGHT	stop	25	https://nether.wowhead.com/tooltip/spell/49576
+207167	Blinding Sleet	DEATHKNIGHT	stop	60	https://nether.wowhead.com/tooltip/spell/207167
+57994	Wind Shear	SHAMAN	kick	12	https://nether.wowhead.com/tooltip/spell/57994
+192058	Capacitor Totem	SHAMAN	stop	60	https://nether.wowhead.com/tooltip/spell/192058
+51490	Thunderstorm	SHAMAN	stop	30	https://nether.wowhead.com/tooltip/spell/51490
+197214	Sundering	SHAMAN	stop	30	https://nether.wowhead.com/tooltip/spell/197214
+51514	Hex	SHAMAN	stop	30	https://nether.wowhead.com/tooltip/spell/51514
+106839	Skull Bash	DRUID	kick	15	https://nether.wowhead.com/tooltip/spell/106839
+78675	Solar Beam	DRUID	kick	60	https://nether.wowhead.com/tooltip/spell/78675
+99	Incapacitating Roar	DRUID	stop	30	https://nether.wowhead.com/tooltip/spell/99
+132469	Typhoon	DRUID	stop	30	https://nether.wowhead.com/tooltip/spell/132469
+5211	Mighty Bash	DRUID	stop	60	https://nether.wowhead.com/tooltip/spell/5211
+96231	Rebuke	PALADIN	kick	15	https://nether.wowhead.com/tooltip/spell/96231
+853	Hammer of Justice	PALADIN	stop	45	https://nether.wowhead.com/tooltip/spell/853
+115750	Blinding Light	PALADIN	stop	90	https://nether.wowhead.com/tooltip/spell/115750
+20066	Repentance	PALADIN	stop	15	https://nether.wowhead.com/tooltip/spell/20066
+116705	Spear Hand Strike	MONK	kick	15	https://nether.wowhead.com/tooltip/spell/116705
+119381	Leg Sweep	MONK	stop	60	https://nether.wowhead.com/tooltip/spell/119381
+115078	Paralysis	MONK	stop	45	https://nether.wowhead.com/tooltip/spell/115078
+116844	Ring of Peace	MONK	stop	45	https://nether.wowhead.com/tooltip/spell/116844
+147362	Counter Shot	HUNTER	kick	24	https://nether.wowhead.com/tooltip/spell/147362
+187707	Muzzle	HUNTER	kick	15	https://nether.wowhead.com/tooltip/spell/187707
+19577	Intimidation	HUNTER	stop	60	https://nether.wowhead.com/tooltip/spell/19577
+187650	Freezing Trap	HUNTER	stop	30	https://nether.wowhead.com/tooltip/spell/187650
+109248	Binding Shot	HUNTER	stop	45	https://nether.wowhead.com/tooltip/spell/109248
+183752	Disrupt	DEMONHUNTER	kick	15	https://nether.wowhead.com/tooltip/spell/183752
+179057	Chaos Nova	DEMONHUNTER	stop	45	https://nether.wowhead.com/tooltip/spell/179057
+211881	Fel Eruption	DEMONHUNTER	stop	30	https://nether.wowhead.com/tooltip/spell/211881
+217832	Imprison	DEMONHUNTER	stop	45	https://nether.wowhead.com/tooltip/spell/217832
+202137	Sigil of Silence	DEMONHUNTER	stop	90	https://nether.wowhead.com/tooltip/spell/202137
+351338	Quell	EVOKER	kick	20	https://nether.wowhead.com/tooltip/spell/351338
+357214	Wing Buffet	EVOKER	stop	180	https://nether.wowhead.com/tooltip/spell/357214
+368970	Tail Swipe	EVOKER	stop	180	https://nether.wowhead.com/tooltip/spell/368970
