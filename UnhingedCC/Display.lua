@@ -15,10 +15,9 @@ local function makeGroup(kind, label, x)
     -- An overlay is interactive only in unlock mode; no permanent header or padding.
     f.mover=CreateFrame('Frame',nil,f,'BackdropTemplate'); f.mover:SetAllPoints()
     f.mover:SetFrameLevel(f:GetFrameLevel()+10)
-    f.mover:SetBackdrop({bgFile=texture,edgeFile=texture,edgeSize=pixel()})
-    f.mover:SetBackdropColor(.07,.20,.19,.8); f.mover:SetBackdropBorderColor(.15,.85,.7,1)
+    U.Style.Panel(f.mover,{.07,.10,.19,.8},U.Style.accent)
     f.mover.label=f.mover:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
-    f.mover.label:SetPoint('CENTER'); f.mover.label:SetText(label..' — drag')
+    U.Style.Font(f.mover.label,'GameFontNormalSmall'); f.mover.label:SetPoint('CENTER'); f.mover.label:SetText(label..' — drag')
     f.mover:EnableMouse(true); f.mover:RegisterForDrag('LeftButton')
     f.mover:SetScript('OnDragStart',function() if not U.db.locked then f:StartMoving() end end)
     f.mover:SetScript('OnDragStop',function()
@@ -37,9 +36,9 @@ local function makeRow(parent, i)
     row.bg=row:CreateTexture(nil,'BACKGROUND'); row.bg:SetAllPoints(); row.bg:SetColorTexture(.09,.09,.10,.9)
     row.icon=row:CreateTexture(nil,'ARTWORK'); row.icon:SetSize(22,22); row.icon:SetPoint('RIGHT',row,'LEFT',-2,0)
     row.icon:SetTexCoord(.08,.92,.08,.92)
-    row.name=row:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall'); row.name:SetPoint('LEFT',5,0)
+    row.name=row:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall'); U.Style.Font(row.name); row.name:SetPoint('LEFT',5,0)
     row.name:SetWidth(WIDTH-HEIGHT-ICON_GAP-48); row.name:SetJustifyH('LEFT')
-    row.time=row:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall'); row.time:SetPoint('RIGHT',-4,0)
+    row.time=row:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall'); U.Style.Font(row.time); row.time:SetPoint('RIGHT',-4,0)
     row:EnableMouse(true)
     row:SetScript('OnEnter',function(self)
         GameTooltip:SetOwner(self,'ANCHOR_RIGHT')
@@ -95,4 +94,13 @@ function U.RefreshDisplay()
         for i=#list+1,#f.rows do f.rows[i]:Hide() end
     end
     driver:SetScript('OnUpdate',active and tick or nil)
+end
+
+function U.RestoreDisplayPositions()
+    for kind,f in pairs(groups) do
+        f:ClearAllPoints()
+        local pos=U.db.positions[kind]
+        if pos then f:SetPoint('TOPLEFT',UIParent,'BOTTOMLEFT',pos.x,pos.y)
+        else f:SetPoint('CENTER',UIParent,'CENTER',kind=='kick' and -160 or 160,40) end
+    end
 end

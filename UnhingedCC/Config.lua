@@ -29,7 +29,7 @@ local function region(parent,kind,font)
     r:SetParent(parent); r:ClearAllPoints(); r:Show(); return r
 end
 local function label(parent,text,x,y,font)
-    local l=region(parent,'font',font or 'GameFontHighlightSmall'); l:SetTextColor(.8,.83,.88)
+    local l=region(parent,'font',font or 'GameFontHighlightSmall'); S.Font(l,font); l:SetTextColor(.8,.83,.88)
     l:SetPoint('TOPLEFT',x,y); l:SetText(text); return l
 end
 local function button(parent,text,x,y,w,fn)
@@ -51,6 +51,64 @@ local function change(fn)
     local ok,err=U.Commit(copy); report(err)
     return ok
 end
+local promptFrame
+local function prompt(title,message,options)
+    if not promptFrame then
+        local shield=CreateFrame('Frame',nil,window); shield:SetAllPoints(); shield:SetFrameStrata('DIALOG'); shield:SetFrameLevel(window:GetFrameLevel()+50); shield:EnableMouse(true)
+        local popup=CreateFrame('Frame',nil,shield,'BackdropTemplate'); popup:SetSize(470,228); popup:SetPoint('CENTER'); popup:EnableMouse(true); S.Panel(popup,S.bg)
+        popup.shield=shield; promptFrame=popup
+        popup.title=S.TitleBar(popup,'').title
+        popup.message=label(popup,'',20,-52); popup.message:SetWidth(430); popup.message:SetHeight(58); popup.message:SetJustifyH('LEFT')
+        popup.input=edit(popup,20,-112,430,''); popup.input:SetMaxLetters(40)
+        popup.error=label(popup,'',20,-151); popup.error:SetWidth(430); popup.error:SetTextColor(1,.45,.45)
+        popup.accept=button(popup,'Yes',254,-184,94,function()
+            local ok,err=popup.action(popup.input:GetText())
+            if ok then popup:Hide() elseif err then popup.error:SetText(err) end
+        end)
+        popup.cancel=button(popup,'No',356,-184,94,function() popup:Hide() end)
+        popup.input:SetScript('OnEnterPressed',function() popup.accept:GetScript('OnClick')(popup.accept) end)
+        popup.input:SetScript('OnEscapePressed',function() popup:Hide() end)
+        popup:SetScript('OnHide',function() shield:Hide() end)
+    end
+    local popup=promptFrame
+    popup.title:SetText(title); popup.message:SetText(message); popup.error:SetText(''); popup.action=options.accept
+    popup.accept:SetText(options.button or 'Yes'); popup.cancel:SetText(options.cancel or 'No')
+    popup.input:SetText(options.value or ''); popup.input:SetShown(options.name==true)
+    popup.shield:Show(); popup:Show()
+    if options.name then popup.input:SetFocus() end
+end
+local function refreshPresets()
+    if not window or not window.presetContent then return end
+    local names=U.PresetNames(); local buttons=window.presetButtons
+    for i,name in ipairs(names) do
+        local b=buttons[i]
+        if not b then b=button(window.presetContent,'',0,-(i-1)*32,180,function() end); buttons[i]=b; b:SetHeight(28); b.caption:SetWidth(166) end
+        b:SetText(name); b.presetName=name; b:Show()
+        b:SetScript('OnClick',function()
+            prompt('Load preset','Replace the current setup with "'..name..'"?',{accept=function()
+                local ok,err=U.LoadPreset(name)
+                if ok then U.RenderConfig() end
+                return ok,err
+            end})
+        end)
+    end
+    for i=#names+1,#buttons do buttons[i]:Hide() end
+    window.presetContent:SetHeight(math.max(1,#names*32))
+end
+local function savePreset()
+    prompt('Save Preset','Preset name',{name=true,button='Save',cancel='Cancel',accept=function(name)
+        local ok,err,existing=U.SavePreset(name)
+        if existing then
+            prompt('Replace preset','A preset named "'..existing..'" already exists. Replace it?',{accept=function()
+                local saved,reason=U.SavePreset(existing,true); if saved then refreshPresets() end
+                return saved,reason
+            end})
+            return false
+        end
+        if ok then refreshPresets() end
+        return ok,err
+    end})
+end
 local dialog
 local function textDialog(title,text,onImport)
     if not dialog then
@@ -61,7 +119,7 @@ local function textDialog(title,text,onImport)
         dialog.title=S.TitleBar(dialog,'').title
         local scroll=S.Scroll(dialog)
         scroll:SetPoint('TOPLEFT',20,-55); scroll:SetSize(655,300)
-        local box=CreateFrame('EditBox',nil,scroll); box:SetMultiLine(true); box:SetFontObject(ChatFontNormal)
+        local box=CreateFrame('EditBox',nil,scroll); box:SetMultiLine(true); S.Font(box,'ChatFontNormal')
         box:SetSize(650,300); box:SetAutoFocus(false); box:SetMaxLetters(32769); box:SetTextInsets(8,8,6,6)
         scroll:SetScrollChild(box); dialog.box=box
         box:SetScript('OnEscapePressed',function() dialog:Hide() end)
@@ -253,7 +311,7 @@ local function priorities()
                 cd:SetScript('OnEnter',function(self) GameTooltip:SetOwner(self,'ANCHOR_RIGHT'); GameTooltip:SetText('Default: '..a.cooldown..' seconds'); GameTooltip:AddLine('Clear to reset.',.7,.75,.85); GameTooltip:Show() end)
                 cd:SetScript('OnLeave',function() GameTooltip:Hide() end)
                 button(r,'Copy',672,-10,76,function() local text,err=U.Macro(p,s); if text then textDialog('Copy ability macro',text) else report(err) end end)
-                button(r,'Create',756,-10,76,function() U.CreateAbilityMacro(p,s) end)
+                button(r,'Create',756,-10,76,function() local id,result=U.CreateAbilityMacro(p,s); report(id and ('Created '..result..' in character macros.') or result) end)
             end
         end
         body.playerHeadings[p]:SetShown(hasStops)
@@ -280,6 +338,7 @@ function U.RenderConfig()
     for i,b in ipairs(window.tabs) do b.selected=i==tab; S.Panel(b,b.selected and S.selected or nil,b.selected and S.accent or nil) end
     if tab==1 then party() else priorities() end
     activePool=nil
+    window.reset:SetShown(tab==1); refreshPresets()
 end
 function U.OpenConfig()
     if not window then
@@ -288,9 +347,11 @@ function U.OpenConfig()
         window:SetClampedToScreen(true); window:EnableMouse(true)
         S.TitleBar(window,'UnhingedCC')
         S.Panel(window,S.bg)
-        window:SetScript('OnHide',function() if picker then picker:Hide() end; if dialog then dialog:Hide() end end)
+        window:SetScript('OnHide',function() if promptFrame then promptFrame:Hide() end; if picker then picker:Hide() end; if dialog then dialog:Hide() end end)
         tinsert(UISpecialFrames,'UnhingedCCOptions')
-        local side=CreateFrame('Frame',nil,window,'BackdropTemplate'); side:SetSize(210,686); side:SetPoint('TOPLEFT',1,-32); S.Panel(side,{.035,.045,.085,1})
+        local side=CreateFrame('Frame',nil,window,'BackdropTemplate'); side:SetSize(210,686); side:SetPoint('TOPLEFT',1,-32); S.Fill(side,{.035,.045,.085,1})
+        local divider=side:CreateTexture(nil,'OVERLAY'); divider:SetColorTexture(unpack(S.border)); divider:SetWidth(S.Pixel(side)); divider:SetPoint('TOPRIGHT'); divider:SetPoint('BOTTOMRIGHT')
+        window.side=side; window.divider=divider
         label(side,'Settings',20,-28,'GameFontNormalLarge')
         window.tabs={
             button(side,'Party Setup',12,-80,186,function() tab=1; U.RenderConfig() end),
@@ -303,14 +364,30 @@ function U.OpenConfig()
         label(side,'Share',20,-315,'GameFontNormalSmall')
         button(side,'Export',12,-345,88,function() textDialog('Export UnhingedCC config',U.Export(U.db)) end)
         button(side,'Import',110,-345,88,function() textDialog('Import UnhingedCC config','',true) end)
-        label(side,'0.3.0',20,-651)
+        label(side,'Presets',20,-394,'GameFontNormalSmall')
+        window.presetScroll=S.Scroll(side); window.presetScroll:SetPoint('TOPLEFT',12,-420); window.presetScroll:SetSize(186,218)
+        window.presetContent=CreateFrame('Frame',nil,window.presetScroll); window.presetContent:SetSize(180,1); window.presetScroll:SetScrollChild(window.presetContent)
+        window.presetButtons={}
+        label(side,'0.4.0',20,-651)
         window.heading=label(window,'',240,-50,'GameFontNormalLarge')
         window.description=label(window,'',240,-80)
         local line=window:CreateTexture(nil,'ARTWORK'); line:SetColorTexture(unpack(S.border)); line:SetSize(874,1/window:GetEffectiveScale()); line:SetPoint('TOPLEFT',240,-106)
         window.scroll=S.Scroll(window); window.scroll:SetPoint('TOPLEFT',226,-130); window.scroll:SetSize(895,505)
-        label(window,'',242,-658)
+        button(window,'Save Preset',976,-658,142,savePreset)
+        window.reset=button(window,'Reset All',242,-658,120,function()
+            prompt('Reset setup','Reset party members, abilities, priorities, cooldowns and bar positions? Saved presets and macros will be kept.',{button='Reset',cancel='Cancel',accept=function()
+                local ok,err=U.ResetConfig(); if ok then U.RenderConfig() end
+                return ok,err
+            end})
+        end)
         status=label(window,'',242,-686); status:SetTextColor(.95,.65,.3)
         tab=1
     end
-    window:Show(); U.RenderConfig(); report((U.blocked or 0)>0 and ('Unreadable chat messages: '..U.blocked) or '')
+    S.RefreshFonts(); window:Show(); U.RenderConfig(); report((U.blocked or 0)>0 and ('Unreadable chat messages: '..U.blocked) or '')
+end
+
+function U.RefreshConfigLines()
+    if window then
+        window.divider:SetWidth(S.Pixel(window.side))
+    end
 end

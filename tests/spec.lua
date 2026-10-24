@@ -44,8 +44,12 @@ check(U.Commit(c))
 local macro=assert(U.Macro(1,2)); check(macro:find('/cast Chaos Nova',1,true)); check(macro:find('/party BrickChaosNova',1,true))
 U.CreateAbilityMacro(1,2); eq(lastMacro,macro,'macro creation')
 U.OpenConfig()
+local function visible(f)
+ while f do if not f:IsShown() then return false end; f=f.parent end
+ return true
+end
 local function click(text)
- for i=#frames,1,-1 do local f=frames[i]; if f.text==text and f.scripts.OnClick then f.scripts.OnClick(f); return f end end
+ for i=#frames,1,-1 do local f=frames[i]; if f.text==text and f.scripts.OnClick and visible(f) then f.scripts.OnClick(f); return f end end
  error('No button '..text)
 end
 local function clickSlot(p,s)
@@ -259,7 +263,7 @@ for _,f in ipairs(frames) do
   windows=windows+1; eq(f.scripts.OnDragStart,nil,'content cannot start dragging')
   check(f.titleBar.scripts.OnDragStart); f.titleBar.scripts.OnDragStart(f.titleBar); eq(f.moving,true)
   f.titleBar.scripts.OnDragStop(f.titleBar); eq(f.moving,false)
-  check(f.titleBar.close.borderColor[1]>.5,'red close button')
+  check(f.titleBar.close.backdropColor[1]>.5,'red close button')
  end
 end
 eq(windows,3)
@@ -273,7 +277,77 @@ eq(output.box:GetText(),output.output,'export text cannot be overwritten')
 U.Style.RefreshBorders()
 local borders=0
 for f in pairs(U.Style.borders) do
- borders=borders+1; check(math.abs(f.backdrop.edgeSize*f:GetEffectiveScale()-1)<.000001)
+ borders=borders+1; check(not f.backdrop.edgeFile,'backdrop borders removed'); check(math.abs(f.borderLines[1].height*f:GetEffectiveScale()-1)<.000001); check(math.abs(f.borderLines[3].width*f:GetEffectiveScale()-1)<.000001)
 end
 check(borders>0)
+-- Exact realm-qualified example remains canonical.
+local realmConfig=U.NewConfig(); realmConfig.players[1].name='Angeels-TarrenMill'; realmConfig.players[1].slots[2].spell=1234195
+eq(U.Trigger(realmConfig.players[1],2),'AngeelsVoidNova')
+-- Preset save/cancel/load/replace/reset all use the same confirmation popup.
+local snapshot=U.NewConfig(); snapshot.players[1].name='Brick-Realm'; snapshot.players[1].slots[1].spell=183752
+snapshot.players[1].slots[2].spell=1234195; snapshot.players[1].slots[2].override=33
+snapshot.positions.kick={x=321,y=432}; snapshot.locked=false
+check(U.Commit(snapshot)); U.RestoreDisplayPositions(); U.OpenConfig(); click('Party Setup')
+local beforeSave=U.Export(U.db)
+click('Save Preset')
+local popup
+for _,f in ipairs(frames) do if f.shield and f.action then popup=f end end
+check(popup); popup.input:SetText('Dungeon'); click('Cancel'); eq(U.presets.Dungeon,nil)
+click('Save Preset'); popup.input:SetText('  '); click('Save'); eq(U.presets['  '],nil); check(popup.error:GetText()~='')
+popup.input:SetText('Dungeon'); click('Save'); check(U.presets.Dungeon); eq(U.presets.Dungeon.positions.kick.x,321)
+eq(U.presets.Dungeon.players[1].slots[2].override,33); eq(UnhingedCCPresets,U.presets)
+local changed=assert(U.Validate(U.db)); changed.players[1].name='Other'; changed.positions.kick.x=99; U.Commit(changed)
+eq(U.presets.Dungeon.players[1].name,'Brick-Realm','snapshot is independent')
+click('Dungeon'); click('No'); eq(U.db.players[1].name,'Other','load cancel preserves setup')
+click('Dungeon'); click('Yes'); eq(U.db.players[1].name,'Brick-Realm'); eq(U.db.positions.kick.x,321)
+eq(U.Export(U.db),beforeSave); eq(U.entries['1:2'].expires,0,'preset load clears active timers')
+-- Duplicate names prompt; cancellation does not overwrite the saved snapshot.
+local changedAgain=assert(U.Validate(U.db)); changedAgain.players[1].slots[2].override=40; U.Commit(changedAgain)
+click('Save Preset'); popup.input:SetText('dungeon'); click('Save'); click('No'); eq(U.presets.Dungeon.players[1].slots[2].override,33)
+click('Save Preset'); popup.input:SetText('Dungeon'); click('Save'); click('Yes'); eq(U.presets.Dungeon.players[1].slots[2].override,40)
+click('Reset All'); click('Cancel'); eq(U.db.players[1].name,'Brick-Realm')
+click('Reset All'); click('Reset'); eq(U.db.players[1].name,''); eq(U.db.locked,true); eq(U.db.positions.kick,nil)
+check(U.presets.Dungeon,'reset retains saved presets')
+click('Dungeon'); click('Yes'); eq(U.db.players[1].name,'Brick-Realm'); eq(U.db.players[1].slots[2].override,40)
+U.InitPresets(); check(U.presets.Dungeon,'presets survive SavedVariables initialization')
+click('Prioritisation')
+local saveButton
+for _,f in ipairs(frames) do if f.text=='Save Preset' and f.scripts.OnClick then saveButton=f end end
+check(saveButton and saveButton:IsShown(),'save available on priorities page')
+-- Header/sidebar have only fills, while controls use a single pixel strip per edge.
+local options
+for _,f in ipairs(frames) do if f.name=='UnhingedCCOptions' then options=f end end
+check(not U.Style.borders[options.titleBar]); check(not U.Style.borders[options.side]); check(options.divider)
+eq(options.side.backdrop.edgeFile,nil); eq(options.titleBar.backdrop.edgeFile,nil)
+-- Fonts: EUI selection, game selection, and inherited fallback on errors/bad paths.
+local sample=CreateFrame('FontString')
+EllesmereUI={GetFontPath=function() return 'eui-font' end}
+U.Style.Font(sample); eq(sample:GetFont(),'eui-font')
+EllesmereUI.GetFontPath=function() error('not initialized') end
+U.Style.Font(sample); eq(sample:GetFont(),'game-font')
+EllesmereUI.GetFontPath=function() return 'missing-font' end
+U.Style.Font(sample); eq(sample:GetFont(),'game-font','bad font falls back to original font object')
+EllesmereUI=nil; U.Style.Font(sample); eq(sample:GetFont(),'game-font')
+-- Macro API: Retail constants only; verify the stored body and surface failures.
+GetMacroInfo=function(key) local m=macroStore[key]; if m then return m.name,m.icon,m.body end end
+CreateMacro=oldCreate; MAX_CHARACTER_MACROS=nil
+GetNumMacros=function() return 0,0 end
+U.roster={'Brick-Realm'}
+local id,macroName=U.CreateAbilityMacro(1,2)
+eq(id,121); local storedName,_,storedBody=GetMacroInfo(id); eq(storedName,macroName)
+check(storedBody:find('/party BrickVoidNova',1,true))
+GetNumMacros=function() return 0,Constants.MacroConsts.MAX_CHARACTER_MACROS end
+local failure,reason=U.CreateAbilityMacro(1,2); eq(failure,nil); check(reason:find('full',1,true))
+GetNumMacros=function() return 0,0 end
+CreateMacro=function() error('API failure') end
+failure,reason=U.CreateAbilityMacro(1,2); eq(failure,nil); check(reason:find('API failure',1,true))
+CreateMacro=function() return nil end
+failure,reason=U.CreateAbilityMacro(1,2); eq(failure,nil); check(reason:find('did not create',1,true))
+CreateMacro=function() return 999 end
+failure,reason=U.CreateAbilityMacro(1,2); eq(failure,nil); check(reason:find('verify',1,true))
+-- UI create button reports failures in the settings window as well as chat.
+click('Create')
+local reported=false
+for _,f in ipairs(frames) do if f.kind=='FontString' and f.text and f.text:find('verify',1,true) then reported=true end end
+check(reported,'macro failure is visible in settings')
 print('PASS: '..count..' assertions; Lua 5.1 model, event, macro, UI and timer tests')

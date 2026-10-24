@@ -6,35 +6,66 @@ S.panel = {.045,.065,.115,1}
 S.border = {.16,.22,.38,1}
 S.accent = {.46,.36,.94,1}
 S.selected = {.10,.13,.25,1}
-S.borders={}
-function S.Panel(f, color, border)
-    S.borders[f]=true
-    f:SetBackdrop({bgFile=S.texture,edgeFile=S.texture,edgeSize=1/f:GetEffectiveScale()})
-    f:SetBackdropColor(unpack(color or S.panel)); f:SetBackdropBorderColor(unpack(border or S.border))
+S.borders, S.fonts = {}, {}
+function S.Pixel(f) return 1/f:GetEffectiveScale() end
+function S.Fill(f,color)
+    f:SetBackdrop({bgFile=S.texture})
+    f:SetBackdropColor(unpack(color or S.panel))
+    S.borders[f]=nil
+    if f.borderLines then for _,line in ipairs(f.borderLines) do line:Hide() end end
 end
-function S.RefreshBorders()
-    for f in pairs(S.borders) do
-        local backdrop=f:GetBackdrop()
-        if backdrop then
-            local r,g,b,a=f:GetBackdropColor(); local br,bg,bb,ba=f:GetBackdropBorderColor()
-            backdrop.edgeSize=1/f:GetEffectiveScale(); f:SetBackdrop(backdrop)
-            f:SetBackdropColor(r,g,b,a); f:SetBackdropBorderColor(br,bg,bb,ba)
+local function sizeBorder(f)
+    local lines,p=f.borderLines,S.Pixel(f)
+    lines[1]:SetHeight(p); lines[2]:SetHeight(p)
+    lines[3]:SetWidth(p); lines[4]:SetWidth(p)
+end
+function S.Border(f,color)
+    if not f.borderLines then
+        f.borderLines={}
+        for i=1,4 do
+            local line=f:CreateTexture(nil,'OVERLAY'); line:SetSnapToPixelGrid(true); line:SetTexelSnappingBias(0); f.borderLines[i]=line
         end
+        local lines=f.borderLines
+        lines[1]:SetPoint('TOPLEFT'); lines[1]:SetPoint('TOPRIGHT')
+        lines[2]:SetPoint('BOTTOMLEFT'); lines[2]:SetPoint('BOTTOMRIGHT')
+        lines[3]:SetPoint('TOPLEFT'); lines[3]:SetPoint('BOTTOMLEFT')
+        lines[4]:SetPoint('TOPRIGHT'); lines[4]:SetPoint('BOTTOMRIGHT')
+    end
+    S.borders[f]=true; f.lineColor=color or S.border
+    sizeBorder(f)
+    for _,line in ipairs(f.borderLines) do line:SetColorTexture(unpack(f.lineColor)); line:Show() end
+end
+function S.Panel(f,color,border) S.Fill(f,color); S.Border(f,border) end
+function S.RefreshBorders() for f in pairs(S.borders) do sizeBorder(f) end end
+function S.Font(region,fallback)
+    fallback=fallback or 'GameFontHighlightSmall'; S.fonts[region]=fallback
+    region:SetFontObject(_G[fallback] or fallback)
+    local path
+    if EllesmereUI and type(EllesmereUI.GetFontPath)=='function' then
+        local ok,value=pcall(EllesmereUI.GetFontPath)
+        if ok and type(value)=='string' and value~='' then path=value end
+    end
+    if not path and GameFontNormal and GameFontNormal.GetFont then path=GameFontNormal:GetFont() end
+    if not path then path=STANDARD_TEXT_FONT end
+    if type(path)=='string' and path~='' then
+        local _,size,flags=region:GetFont()
+        local ok,result=pcall(region.SetFont,region,path,size or 11,flags or '')
+        if not ok or result==false then region:SetFontObject(_G[fallback] or fallback) end
     end
 end
+function S.RefreshFonts() for region,fallback in pairs(S.fonts) do S.Font(region,fallback) end end
 function S.Button(f)
     S.Panel(f)
     if not f.caption then
         f.caption=f:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
         f.caption:SetPoint('CENTER'); f:SetFontString(f.caption)
     end
-    f.caption:SetTextColor(.83,.85,.89)
-    f:SetScript('OnEnter',function(self) self:SetBackdropColor(.10,.15,.27,1); self:SetBackdropBorderColor(unpack(S.accent)) end)
+    S.Font(f.caption); f.caption:SetTextColor(.83,.85,.89)
+    f:SetScript('OnEnter',function(self) S.Panel(self,{.10,.15,.27,1},S.accent) end)
     f:SetScript('OnLeave',function(self) S.Panel(self,self.selected and S.selected or nil,self.selected and S.accent or nil) end)
 end
 function S.Input(f)
-    S.Panel(f,{.025,.035,.06,1})
-    f:SetFontObject('GameFontHighlightSmall'); f:SetTextInsets(8,8,0,0)
+    S.Panel(f,{.025,.035,.06,1}); S.Font(f); f:SetTextInsets(8,8,0,0)
 end
 function S.Scroll(parent)
     local f=CreateFrame('ScrollFrame',nil,parent)
@@ -44,21 +75,19 @@ function S.Scroll(parent)
     end)
     return f
 end
-
-function S.TitleBar(owner, text)
+function S.TitleBar(owner,text)
     owner:SetMovable(true)
     local bar=CreateFrame('Frame',nil,owner,'BackdropTemplate')
-    bar:SetPoint('TOPLEFT',1,-1); bar:SetSize(owner:GetWidth()-2,30)
-    S.Panel(bar,{.075,.09,.18,1})
+    bar:SetPoint('TOPLEFT'); bar:SetSize(owner:GetWidth(),30); S.Fill(bar,{.075,.09,.18,1})
     bar:EnableMouse(true); bar:RegisterForDrag('LeftButton')
     bar:SetScript('OnDragStart',function() owner:StartMoving() end)
     bar:SetScript('OnDragStop',function() owner:StopMovingOrSizing() end)
-    bar.title=bar:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
+    bar.title=bar:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall'); S.Font(bar.title)
     bar.title:SetPoint('LEFT',10,0); bar.title:SetText(text)
-    local close=CreateFrame('Button',nil,bar,'BackdropTemplate'); close:SetSize(40,28); close:SetPoint('TOPRIGHT',-1,-1)
-    S.Button(close); close:SetText('X'); S.Panel(close,{.55,.08,.13,1},{.72,.15,.20,1})
-    close:SetScript('OnEnter',function(self) S.Panel(self,{.8,.12,.18,1}) end)
-    close:SetScript('OnLeave',function(self) S.Panel(self,{.55,.08,.13,1},{.72,.15,.20,1}) end)
+    local close=CreateFrame('Button',nil,bar,'BackdropTemplate'); close:SetSize(40,30); close:SetPoint('TOPRIGHT')
+    S.Button(close); close:SetText('X'); S.Fill(close,{.55,.08,.13,1})
+    close:SetScript('OnEnter',function(self) S.Fill(self,{.8,.12,.18,1}) end)
+    close:SetScript('OnLeave',function(self) S.Fill(self,{.55,.08,.13,1}) end)
     close:SetScript('OnClick',function() owner:Hide() end)
     bar.close=close; owner.titleBar=bar
     return bar

@@ -29,7 +29,7 @@ events:SetScript('OnEvent',function(self,event,...)
             U.Print('Saved config could not be loaded: '..err..' It has been preserved; import a valid config to replace it.')
             db=U.NewConfig(); U.invalidSaved=true
         else UnhingedCCDB=db end
-        U.db=db; U.Rebuild(); U.Roster()
+        U.InitPresets(); U.db=db; U.Rebuild(); U.Roster()
         if migrated and not U.invalidSaved then U.Print('Tracking IDs are now generated automatically as PlayerKick / PlayerAbility. Recreate or edit macros that used custom or numeric IDs.') end
         self:UnregisterEvent('ADDON_LOADED')
         for _,ev in ipairs({'UI_SCALE_CHANGED','GROUP_ROSTER_UPDATE','PLAYER_ENTERING_WORLD','CHAT_MSG_PARTY','CHAT_MSG_PARTY_LEADER','CHAT_MSG_INSTANCE_CHAT','CHAT_MSG_INSTANCE_CHAT_LEADER'}) do self:RegisterEvent(ev) end
@@ -40,8 +40,8 @@ events:SetScript('OnEvent',function(self,event,...)
             elseif cmd=='reset' then for _,e in pairs(U.entries) do e.expires=0 end; U.RefreshDisplay()
             else U.OpenConfig() end
         end
-    elseif event=='UI_SCALE_CHANGED' then U.RefreshDisplay(); U.Style.RefreshBorders()
-    elseif event=='GROUP_ROSTER_UPDATE' or event=='PLAYER_ENTERING_WORLD' then U.Roster()
+    elseif event=='UI_SCALE_CHANGED' then U.RefreshDisplay(); U.Style.RefreshBorders(); if U.RefreshConfigLines then U.RefreshConfigLines() end
+    elseif event=='GROUP_ROSTER_UPDATE' or event=='PLAYER_ENTERING_WORLD' then U.Roster(); if event=='PLAYER_ENTERING_WORLD' then U.Style.RefreshFonts() end
     else
         local message,sender=...
         U.HandleChat(message,sender,GetTime())
@@ -62,20 +62,31 @@ function U.Macro(p,s)
     return '#showtooltip '..name..'\n/cast '..name..'\n'..channel..U.Trigger(player,s)
 end
 function U.CreateAbilityMacro(p,s)
-    if InCombatLockdown() then U.Print('Create macros outside combat.'); return end
+    local function fail(message) U.Print(message); return nil,message end
+    if InCombatLockdown() then return fail('Create macros outside combat.') end
     local text,err=U.Macro(p,s)
-    if not text then U.Print(err); return end
+    if not text then return fail(err) end
     local player=U.db.players[p]
     local name,realm=UnitFullName('player')
     local full=name..'-'..((realm and realm~='') and realm or GetNormalizedRealmName())
-    if U.ResolveName(player.name,U.roster)~=U.Name(full) then U.Print('Only create macros for your own configured character. Use Copy Macro for another player.'); return end
-    if #text>255 then U.Print('Macro exceeds the 255-byte limit. Copy it and shorten the showtooltip line in the macro editor.'); return end
-    -- Never overwrite an existing macro, including one from an earlier config.
+    -- Refresh the roster before matching a character entered after login/group changes.
+    U.Roster()
+    if U.ResolveName(player.name,U.roster)~=U.Name(full) then return fail('Create is only available for your character. Use Copy for another player.') end
+    if #text>255 then return fail('Macro exceeds 255 bytes. Use Copy and shorten the showtooltip line.') end
     local macroName
     for i=1,99 do local candidate='UCC'..s..'_'..i; if not GetMacroInfo(candidate) then macroName=candidate; break end end
-    if not macroName then U.Print('No free UnhingedCC macro name.'); return end
+    if not macroName then return fail('No unused macro name. Use Copy.') end
+    local limits=Constants and Constants.MacroConsts
+    local maxCharacter=(limits and limits.MAX_CHARACTER_MACROS) or MAX_CHARACTER_MACROS or 30
     local _,character=GetNumMacros()
-    if character>=MAX_CHARACTER_MACROS then U.Print('Character macro slots are full. Use Copy Macro.'); return end
-    local ok,result=pcall(CreateMacro,macroName,U.Abilities[player.slots[s].spell].icon,text,true)
-    U.Print(ok and result and ('Created character macro '..macroName..'. Drag it from /macro to your action bar.') or 'Macro creation failed. Use Copy Macro.')
+    if type(character)~='number' then return fail('Could not read the character macro slots. Use Copy.') end
+    if character>=maxCharacter then return fail('Character macro slots are full. Use Copy.') end
+    local icon=C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(player.slots[s].spell) or U.Abilities[player.slots[s].spell].icon
+    local ok,index=pcall(CreateMacro,macroName,icon,text,true)
+    if not ok then return fail('Macro creation failed: '..tostring(index)) end
+    if type(index)~='number' or index<=0 then return fail('WoW did not create the macro. Use Copy in the macro editor.') end
+    local savedName,_,savedText=GetMacroInfo(index)
+    if savedName~=macroName or savedText~=text then return fail('Could not verify the new macro. Check the character tab in /macro.') end
+    U.Print('Created '..macroName..' in the character tab of /macro.')
+    return index,macroName
 end

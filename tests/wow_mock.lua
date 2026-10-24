@@ -14,6 +14,16 @@ function methods:SetWidth(w) self.width=w end
 function methods:SetHeight(h) self.height=h end
 function methods:SetPoint(...) self.point={...} end
 function methods:ClearAllPoints() self.point=nil end
+function methods:SetFontObject(font) self.fontObject=type(font)=='string' and (_G[font] or GameFontNormal) or font; self.fontPath=nil end
+function methods:GetFont()
+ if self.fontPath then return self.fontPath,self.fontSize,self.fontFlags end
+ if self.fontObject then return self.fontObject:GetFont() end
+ return 'Fonts\\FRIZQT__.TTF',11,''
+end
+function methods:SetFont(path,size,flags)
+ if path=='missing-font' then return false end
+ self.fontPath=path; self.fontSize=size; self.fontFlags=flags; return true
+end
 function methods:GetEffectiveScale() return (self.scale or 1)*(self.parent and self.parent:GetEffectiveScale() or 1) end
 function methods:SetScale(s) self.scale=s end
 function methods:SetBackdrop(b) self.backdrop=b end
@@ -44,6 +54,8 @@ function CreateFrame(kind,name,parent,template)
  local f=setmetatable({kind=kind,parent=parent,template=template,scripts={},events={},name=name},mt)
  frames[#frames+1]=f; return f
 end
+GameFontNormal={GetFont=function() return 'game-font',12,'' end}
+GameFontHighlightSmall=GameFontNormal
 UIParent=CreateFrame('Frame'); RAID_CLASS_COLORS=setmetatable({},{__index=function() return {r=.5,g=.6,b=.7} end})
 GameTooltip=CreateFrame('Tooltip'); UISpecialFrames={}; SlashCmdList={}; tinsert=table.insert
 function GetTime() return clock end
@@ -54,8 +66,10 @@ function GetNormalizedRealmName() return 'Realm' end
 C_Spell={GetSpellName=function(id) return U.Abilities[id].name end}
 function IsInGroup() return false end
 function InCombatLockdown() return false end
-function GetMacroInfo() return nil end
+macroStore={}
+function GetMacroInfo(key) local m=macroStore[key]; if m then return m.name,m.icon,m.body end end
 function GetNumMacros() return 0,0 end
-MAX_CHARACTER_MACROS=30
-function CreateMacro(name,icon,text) lastMacro=text; return 1 end
+Constants={MacroConsts={MAX_CHARACTER_MACROS=30,MAX_ACCOUNT_MACROS=120}}
+MAX_CHARACTER_MACROS=nil
+function CreateMacro(name,icon,text) lastMacro=text; macroStore[121]={name=name,icon=icon,body=text}; macroStore[name]=macroStore[121]; return 121 end
 secret={}; function issecretvalue(v) return rawequal(v,secret) end
