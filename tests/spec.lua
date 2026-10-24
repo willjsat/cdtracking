@@ -398,4 +398,44 @@ eq(U.Style.gold[1],1); eq(U.Style.gold[2],.82); eq(U.Style.gold[3],0)
 eq(options.titleBar.title:GetText(),'UnhingedCC')
 check(options.side and options.presetContent and options.reset)
 click('Prioritisation'); check(saveButton:IsShown())
+-- Settings has no outer outline; popup outlines match their title bars.
+check(not U.Style.borders[options],'configuration window has no outline')
+for _,popupWindow in ipairs({popup,output,pickerFrame}) do
+ eq(popupWindow.lineColor,U.Style.header,'popup border uses header colour')
+end
+-- Body text gains two points once; titles retain their inherited size.
+local bodyFont=CreateFrame('FontString'); local titleFont=CreateFrame('FontString')
+U.Style.Font(bodyFont); local _,bodySize=bodyFont:GetFont(); eq(bodySize,14)
+U.Style.Font(titleFont,nil,true); local _,titleSize=titleFont:GetFont(); eq(titleSize,12)
+U.Style.RefreshFonts(); local _,refreshedSize=bodyFont:GetFont(); eq(refreshedSize,14,'font refresh does not compound the increase')
+local _,refreshedTitle=titleFont:GetFont(); eq(refreshedTitle,12)
+-- Hovering assigned party icons uses the actual spell tooltip, not summary text.
+local tooltipConfig=U.NewConfig(); tooltipConfig.players[1].name='Brick'
+U.AssignAbility(tooltipConfig,1,1,183752); U.AssignAbility(tooltipConfig,1,2,1234195)
+U.Commit(tooltipConfig); click('Party Setup')
+local partyIcon
+for _,f in ipairs(frames) do
+ if f.kind=='Button' and f.playerIndex==1 and f.slotIndex==2 and visible(f) then partyIcon=f end
+end
+check(partyIcon)
+partyIcon.scripts.OnEnter(partyIcon); eq(GameTooltip.tooltipSpell,1234195); check(GameTooltip:IsShown())
+partyIcon.scripts.OnLeave(partyIcon); check(not GameTooltip:IsShown())
+click('Prioritisation')
+local spellIcon
+for _,f in ipairs(frames) do if f.kind=='Button' and f.spellID==1234195 and visible(f) then spellIcon=f end end
+check(spellIcon)
+local calls=GameTooltip.tooltipCalls
+spellIcon.scripts.OnEnter(spellIcon); eq(GameTooltip.tooltipSpell,1234195); eq(GameTooltip.tooltipCalls,calls+1)
+spellIcon.scripts.OnLeave(spellIcon); check(not GameTooltip:IsShown())
+-- Reused icons get one hover callback, without accumulating old tooltip handlers.
+for i=1,4 do U.RenderConfig() end
+calls=GameTooltip.tooltipCalls
+spellIcon.scripts.OnEnter(spellIcon); eq(GameTooltip.tooltipCalls,calls+1)
+local headerFound=false
+for _,f in ipairs(frames) do
+ if f.kind=='FontString' and f.text=='Chat ID' and visible(f) then
+  eq(f.parent.backdropColor[1],U.Style.tableHeader[1]); local _,size=f:GetFont(); eq(size,14); headerFound=true
+ end
+end
+check(headerFound,'readable column header band exists')
 print('PASS: '..count..' assertions; Lua 5.1 model, event, macro, UI and timer tests')

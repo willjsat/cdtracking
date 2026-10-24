@@ -3,7 +3,7 @@
 ## Notes: Lightweight, macro-announced party kicks and stops.
 ## Author: willjsat
 ## OptionalDeps: EllesmereUI
-## Version: 0.5.0
+## Version: 0.5.1
 ## SavedVariables: UnhingedCCDB, UnhingedCCPresets
 Abilities.lua
 Model.lua

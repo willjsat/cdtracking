@@ -1,6 +1,6 @@
 # UnhingedCC
 
-A lightweight World of Warcraft **Retail 12.1.5** addon for manually announced party interrupts and crowd control. Version 0.5.0; Interface 120105. No runtime dependencies or bundled libraries.
+A lightweight World of Warcraft **Retail 12.1.5** addon for manually announced party interrupts and crowd control. Version 0.5.1; Interface 120105. No runtime dependencies or bundled libraries.
 
 ## Install
 
@@ -33,11 +33,11 @@ The catalog now contains **79 spell entries**, including Devourer's Void Nova (4
 
 ## Configuration window
 
-Warm dark panels, grey navigation selections, gold headings and section bars based on the supplied Guild & Communities and Achievements panels. The Party Setup / Prioritisation pages and controls retain their structure. Outlines use one-physical-pixel solid lines rather than backdrop edges. Title bars have a solid fill without a border; the sidebar has a single divider against the content area. Drag windows using their title bars; the red X closes them. The rest of each window does not start a drag. Text uses EllesmereUI's selected font when its font API is available, then the game's main font, with the existing Blizzard font objects as a fallback. Fonts refresh when opening settings or entering the world; no font polling is used.
+Warm dark panels, grey navigation selections, gold headings and section bars based on the supplied Guild & Communities and Achievements panels. The Party Setup / Prioritisation pages and controls retain their structure. The main settings window has no outer border. Controls retain one-physical-pixel outlines, and popup outlines match the dark title-bar colour. Title bars have a solid fill without a border; the sidebar has a single divider against the content area. Drag windows using their title bars; the red X closes them. The rest of each window does not start a drag. Text uses EllesmereUI's selected font when its font API is available, then the game's main font, with the existing Blizzard font objects as a fallback. Body text, controls and tracker labels are two points larger than the inherited font size; titles keep their original sizes. Fonts refresh when opening settings or entering the world without compounding that size increase; no font polling is used.
 
-The ability picker uses compact three-column entries. Choose a class from the dropdown and type a spell or spec name to narrow the results. Select **All classes** to clear the class filter. Hover an ability for details.
+The ability picker uses compact three-column entries. Choose a class from the dropdown and type a spell or spec name to narrow the results. Select **All classes** to clear the class filter. Hover an assigned Party Setup icon, a Prioritisation icon or a picker entry to see the in-game spell tooltip.
 
-Prioritisation has aligned columns for order, player/ability, read-only chat ID, cooldown and macros. Cooldown boxes show the current value rather than an empty box. Edit seconds to override it, or clear the box to restore the catalog default.
+Prioritisation has aligned columns for order, player/ability, read-only chat ID, cooldown and macros, with bright column labels on a contrasting neutral-grey header band. Cooldown boxes show the current value rather than an empty box. Edit seconds to override it, or clear the box to restore the catalog default.
 
 ## Presets and reset
 
@@ -86,4 +86,4 @@ Tests execute the actual addon Lua in Lua 5.1 via Lupa, including model/config v
 
 Before use: enable script errors (`/console scriptErrors 1`), configure two real party members, test announcements from each, reject spoofed/partial messages, verify cooldown/priority transitions, drag/lock both groups, import/export and reload. Repeat in a dungeon during combat and check `/ucc status`. Test premade party and instance groups separately. Verify macros when casts fail, as those still announce. Run alongside your usual addons and check CPU/memory in game.
 
-To package: `python tools/package.py` creates `dist/UnhingedCC-0.5.0.zip` containing only the installable addon folder.
+To package: `python tools/package.py` creates `dist/UnhingedCC-0.5.1.zip` containing only the installable addon folder.

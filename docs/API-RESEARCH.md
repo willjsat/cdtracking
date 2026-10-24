@@ -71,3 +71,9 @@ Borders now use four solid, pixel-snapped texture strips instead of a backdrop e
 The settings palette follows the supplied Guild & Communities and Achievements screenshots: warm near-black backgrounds, grey navigation rows, gold headings and brown section bands. Page structure, thin pixel-line outlines, font inheritance, title-bar dragging, presets, imports and generated chat IDs remain as before. No new art files or runtime libraries are required.
 
 Automatic ability assignment now ranks kicks and stops independently. A new assignment appends to its category and the assigned entries in that category are numbered consecutively, preserving relative order. Replacements retain order and removals close gaps. The other category is untouched. Existing manually entered or imported values are preserved unless an assignment in that category changes; direct priority edits remain supported. Tests exercise sparse player/slot assignments, mixed kick/stop additions, replacement, removal, manual ordering and the actual picker callbacks.
+
+## 0.5.1 readability and native tooltips
+
+The main settings frame uses a fill without any outside border; popup outlines use the same colour as their title bar. Body fonts are two points above the inherited role size, while title roles retain their existing size. Font refreshes reset to the inherited font object before applying the increase, preventing cumulative growth.
+
+Party Setup buttons, picker entries and mouse-enabled Prioritisation icon buttons call the game's `GameTooltip:SetSpellByID` for the selected spell. These are native tooltips, not locally reconstructed spell descriptions. Pooled widgets clear old hover handlers before reuse so redraws do not accumulate callbacks. Tests cover tooltip spell IDs, leave-to-hide behaviour, callback reuse, font-size stability, popup outlines and the brighter table header band. Actual rendering and client spell data still require an in-game check.

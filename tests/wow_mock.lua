@@ -7,6 +7,7 @@ function methods:HasScript() return true end
 function methods:RegisterEvent(e) self.events[e]=true end
 function methods:UnregisterEvent(e) self.events[e]=nil end
 function methods:SetText(s) self.text=tostring(s); if self.scripts.OnTextChanged then self.scripts.OnTextChanged(self,false) end end
+function methods:SetSpellByID(id) self.tooltipSpell=id; self.tooltipCalls=(self.tooltipCalls or 0)+1 end
 function methods:GetText() return self.text or '' end
 function methods:SetParent(p) self.parent=p end
 function methods:SetSize(w,h) self.width=w;self.height=h end
