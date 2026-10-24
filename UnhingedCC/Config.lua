@@ -203,7 +203,7 @@ local function layoutPriorities()
 end
 local function priorities()
     priorityRows={}; body.headings={}; body.playerHeadings={}
-    label(body,'Priority     Player / Ability                                     Exact chat value                       CD seconds       Macro',15,-5,'GameFontNormalSmall')
+    label(body,'Priority     Player / Ability                                     Tracking ID (read-only)                       CD seconds       Macro',15,-5,'GameFontNormalSmall')
     for _,kind in ipairs({'kick','stop'}) do body.headings[kind]=label(body,kind=='kick' and 'Kicks' or 'Stops',0,0,'GameFontNormalLarge') end
     for p=1,5 do
         local player=U.db.players[p]
@@ -224,10 +224,7 @@ local function priorities()
                 pr:SetScript('OnEditFocusLost',function(self) self:SetText(U.db.players[p].slots[s].priority) end)
                 local icon=region(r,'texture'); icon:SetSize(24,24); icon:SetPoint('TOPLEFT',52,0); icon:SetTexture(a.icon)
                 local title=label(r,(s==1 and player.name..' — ' or '')..a.name,82,-5); title:SetWidth(295); title:SetJustifyH('LEFT')
-                local tr=edit(r,390,0,185,U.Trigger(player,s)); tr:SetMaxLetters(100)
-                tr:SetScript('OnEditFocusLost',function(self)
-                    if not change(function(c) local value=self:GetText(); c.players[p].slots[s].trigger=value==U.DefaultTrigger(c.players[p],c.players[p].slots[s].spell) and '' or value end) then self:SetText(U.Trigger(U.db.players[p],s)) end
-                end)
+                local tr=label(r,U.Trigger(player,s),390,-5); tr:SetWidth(185); tr:SetJustifyH('LEFT')
                 local cd=edit(r,595,0,64,tostring(slot.override or '')); cd:SetMaxLetters(8)
                 cd:SetScript('OnEditFocusLost',function(self)
                     local text=self:GetText(); local n=tonumber(text)
@@ -258,7 +255,7 @@ function U.RenderConfig()
     body:SetSize(890,490); body:Show(); window.scroll:SetScrollChild(body); window.scroll:SetVerticalScroll(0)
     lock:SetText(U.db.locked and 'Unlock Bars' or 'Lock Bars')
     window.heading:SetText(tab==1 and 'Party Setup' or 'Prioritisation')
-    window.description:SetText(tab==1 and 'Build your party. Choose an interrupt and four crowd-control abilities per player.' or 'Set your rotation order, chat messages and cooldown overrides.')
+    window.description:SetText(tab==1 and 'Build your party. Choose an interrupt and four crowd-control abilities per player.' or 'Set your rotation order and cooldown overrides. Tracking IDs are generated automatically.')
     for i,b in ipairs(window.tabs) do b.selected=i==tab; S.Panel(b,b.selected and {.12,.22,.22,1} or nil,b.selected and S.accent or nil) end
     if tab==1 then party() else priorities() end
     activePool=nil
@@ -287,7 +284,7 @@ function U.OpenConfig()
         label(side,'SHARE SETUP',20,-370,'GameFontNormalSmall')
         button(side,'Export',12,-400,88,function() textDialog('Export UnhingedCC config',U.Export(U.db)) end)
         button(side,'Import',110,-400,88,function() textDialog('Import UnhingedCC config','',true) end)
-        label(side,'0.2.0  •  Retail 12.1.5',20,-680)
+        label(side,'0.2.1  •  Retail 12.1.5',20,-680)
         window.heading=label(window,'',240,-30,'GameFontNormalHuge')
         window.description=label(window,'',240,-71)
         button(window,'Close',1030,-24,86,function() window:Hide() end)

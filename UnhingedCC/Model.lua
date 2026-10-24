@@ -1,6 +1,6 @@
 local _, U = ...
 local floor, sort = math.floor, table.sort
-U.VERSION = 2
+U.VERSION = 3
 function U.IsSecret(v) return issecretvalue and issecretvalue(v) end
 function U.CleanText(v, max, empty)
     return type(v) == 'string' and #v <= max and (empty or #v > 0)
@@ -10,11 +10,11 @@ function U.Name(v)
     return v:lower():gsub('%s+', '')
 end
 function U.NewConfig()
-    local c = {version = 2, locked = true, players = {}, positions = {}}
+    local c = {version = 3, locked = true, players = {}, positions = {}}
     for p = 1, 5 do
         c.players[p] = {name = '', slots = {}}
         for s = 1, 5 do
-            c.players[p].slots[s] = {spell = 0, priority = (p-1)*5+s, trigger = ''}
+            c.players[p].slots[s] = {spell = 0, priority = (p-1)*5+s}
         end
     end
     return c
@@ -24,14 +24,13 @@ function U.DefaultTrigger(player, spell)
     local ability = U.Abilities[spell]
     local name = player.name:match('^[^-]+') or ''
     if not ability then return '' end
-    return name .. (ability.kind == 'kick' and 'Kick' or (ability.token or ability.name:gsub('[^%w]', '')))
+    return name .. (ability.kind == 'kick' and 'Kick' or ability.name:gsub('[^%w]', ''))
 end
 function U.Trigger(player, s)
-    local a = player.slots[s]
-    return a.trigger ~= '' and a.trigger or U.DefaultTrigger(player, a.spell)
+    return U.DefaultTrigger(player, player.slots[s].spell)
 end
 function U.Validate(c)
-    if type(c) ~= 'table' or (c.version ~= 1 and c.version ~= 2) or type(c.players) ~= 'table' then return nil, 'Unsupported config.' end
+    if type(c) ~= 'table' or (c.version ~= 1 and c.version ~= 2 and c.version ~= 3) or type(c.players) ~= 'table' then return nil, 'Unsupported config.' end
     local out, names, triggers = U.NewConfig(), {}, {}
     out.locked = c.locked ~= false
     for p = 1, 5 do
@@ -50,20 +49,11 @@ function U.Validate(c)
             local ability = U.Abilities[spell]
             if spell ~= 0 and (not ability or ability.kind ~= (s == 1 and 'kick' or 'stop')) then return nil, 'Invalid ability for slot.' end
             if type(a.priority) ~= 'number' or a.priority ~= floor(a.priority) or a.priority < 1 or a.priority > 999 then return nil, 'Priority must be 1–999.' end
-            if not U.CleanText(a.trigger, 100, true) then return nil, 'Invalid chat value.' end
             if a.override ~= nil and (type(a.override) ~= 'number' or a.override ~= a.override or a.override < 0.1 or a.override > 3600) then return nil, 'Cooldown must be 0.1–3600 seconds.' end
-            local custom = a.trigger
-            -- v1 UI sometimes saved a displayed default as an explicit override.
-            -- Migrate numeric player IDs while retaining genuinely custom messages.
-            if c.version == 1 then
-                local prefix, index = custom:match('^(.*):(%d+)$')
-                if prefix == player.name and tonumber(index) >= 1 and tonumber(index) <= 5 then custom = '' end
-            end
-            if custom == U.DefaultTrigger(player, spell) then custom = '' end
-            local trigger = custom ~= '' and custom or U.DefaultTrigger(player, spell)
+            local trigger = U.DefaultTrigger(player, spell)
             if spell ~= 0 and triggers[p][trigger] then return nil, 'Duplicate chat value for this player.' end
             if spell ~= 0 then triggers[p][trigger] = true end
-            out.players[p].slots[s] = {spell = spell, priority = a.priority, trigger = custom, override = a.override}
+            out.players[p].slots[s] = {spell = spell, priority = a.priority, override = a.override}
         end
     end
     if type(c.positions) == 'table' then
@@ -84,13 +74,13 @@ local function dec(s)
     return (s:gsub('%%(%x%x)',function(h) return string.char(tonumber(h,16)) end))
 end
 function U.Export(c)
-    local lines = {'UCC2'}
+    local lines = {'UCC3'}
     for p = 1, 5 do
         local player = c.players[p]
         lines[#lines+1] = 'P\t' .. enc(player.name)
         for s = 1, 5 do
             local a = player.slots[s]
-            lines[#lines+1] = table.concat({'A',a.spell,a.priority,a.override or '',enc(a.trigger)},'\t')
+            lines[#lines+1] = table.concat({'A',a.spell,a.priority,a.override or ''},'\t')
         end
     end
     return table.concat(lines,'\n')
@@ -100,16 +90,24 @@ function U.Import(text)
     local ok, result, reason = pcall(function()
         text = text:gsub('\r',''):gsub('\n+$','')
         local lines = {}; for l in (text .. '\n'):gmatch('(.-)\n') do lines[#lines+1] = l end
-        if #lines ~= 31 or (lines[1] ~= 'UCC1' and lines[1] ~= 'UCC2') then return nil, 'Invalid UnhingedCC config.' end
+        if #lines ~= 31 or (lines[1] ~= 'UCC1' and lines[1] ~= 'UCC2' and lines[1] ~= 'UCC3') then return nil, 'Invalid UnhingedCC config.' end
         local c, n = U.NewConfig(), 2
-        c.version = lines[1] == 'UCC1' and 1 or 2
+        -- Older formats carried a custom trigger field; accept but discard it.
+        local legacy = lines[1] ~= 'UCC3'
         for p=1,5 do
             local name = lines[n]:match('^P\t(.*)$'); if not name then return nil,'Invalid player record.' end
             c.players[p].name = dec(name); n=n+1
             for s=1,5 do
-                local id,priority,override,trigger = lines[n]:match('^A\t(%d+)\t(%d+)\t([%d%.]*)\t(.*)$')
+                local id,priority,override
+                if legacy then
+                    local trigger
+                    id,priority,override,trigger = lines[n]:match('^A\t(%d+)\t(%d+)\t([%d%.]*)\t(.*)$')
+                    if trigger then dec(trigger) end -- Validate escapes without retaining custom IDs.
+                else
+                    id,priority,override = lines[n]:match('^A\t(%d+)\t(%d+)\t([%d%.]*)$')
+                end
                 if not id then return nil,'Invalid ability record.' end
-                c.players[p].slots[s] = {spell=tonumber(id),priority=tonumber(priority),override=override ~= '' and tonumber(override) or nil,trigger=dec(trigger)}
+                c.players[p].slots[s] = {spell=tonumber(id),priority=tonumber(priority),override=override ~= '' and tonumber(override) or nil}
                 if override ~= '' and not tonumber(override) then return nil,'Invalid cooldown.' end
                 n=n+1
             end

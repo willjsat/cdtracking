@@ -23,14 +23,14 @@ events:SetScript('OnEvent',function(self,event,...)
     if event=='ADDON_LOADED' then
         if (...)~=addon then return end
         local db,err
-        local migrated = UnhingedCCDB and UnhingedCCDB.version == 1
+        local migrated = UnhingedCCDB and UnhingedCCDB.version ~= U.VERSION
         if UnhingedCCDB then db,err=U.Validate(UnhingedCCDB) else db=U.NewConfig() end
         if not db then
             U.Print('Saved config could not be loaded: '..err..' It has been preserved; import a valid config to replace it.')
             db=U.NewConfig(); U.invalidSaved=true
         else UnhingedCCDB=db end
         U.db=db; U.Rebuild(); U.Roster()
-        if migrated and not U.invalidSaved then U.Print('Updated chat IDs to PlayerKick / PlayerAbility. Recreate or edit your macros; old numeric IDs are no longer tracked.') end
+        if migrated and not U.invalidSaved then U.Print('Tracking IDs are now generated automatically as PlayerKick / PlayerAbility. Recreate or edit macros that used custom or numeric IDs.') end
         self:UnregisterEvent('ADDON_LOADED')
         for _,ev in ipairs({'UI_SCALE_CHANGED','GROUP_ROSTER_UPDATE','PLAYER_ENTERING_WORLD','CHAT_MSG_PARTY','CHAT_MSG_PARTY_LEADER','CHAT_MSG_INSTANCE_CHAT','CHAT_MSG_INSTANCE_CHAT_LEADER'}) do self:RegisterEvent(ev) end
         SLASH_UNHINGEDCC1='/ucc'; SLASH_UNHINGEDCC2='/unhingedcc'
@@ -69,7 +69,7 @@ function U.CreateAbilityMacro(p,s)
     local name,realm=UnitFullName('player')
     local full=name..'-'..((realm and realm~='') and realm or GetNormalizedRealmName())
     if U.ResolveName(player.name,U.roster)~=U.Name(full) then U.Print('Only create macros for your own configured character. Use Copy Macro for another player.'); return end
-    if #text>255 then U.Print('Macro exceeds the 255-byte limit. Shorten the chat value.'); return end
+    if #text>255 then U.Print('Macro exceeds the 255-byte limit. Copy it and shorten the showtooltip line in the macro editor.'); return end
     -- Never overwrite an existing macro, including one from an earlier config.
     local macroName
     for i=1,99 do local candidate='UCC'..s..'_'..i; if not GetMacroInfo(candidate) then macroName=candidate; break end end

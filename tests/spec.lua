@@ -10,7 +10,7 @@ eq(#c.players,5); eq(#c.players[1].slots,5)
 c.players[1].slots[2].trigger='CustomStop'; c.players[1].slots[2].override=33
 local imported=assert(U.Import(U.Export(c)))
 eq(imported.players[1].slots[2].override,33)
-eq(imported.players[1].slots[2].trigger,'CustomStop')
+eq(imported.players[1].slots[2].trigger,nil,'custom IDs discarded')
 check(not U.Import('return os.execute("bad")'))
 check(not U.Import(string.rep('X',32769)))
 check(not U.Import(U.Export(c):gsub('Brick','%%ZZ',1)))
@@ -18,7 +18,7 @@ local bad=clone(c); bad.players[1].slots[2].spell=183752; check(not U.Validate(b
 bad=clone(c); bad.players[2].name='brick'; check(not U.Validate(bad),'duplicate name')
 bad=clone(c); bad.players[1].slots[1].priority=0; check(not U.Validate(bad))
 bad=clone(c); bad.players[1].slots[1].override=0/0; check(not U.Validate(bad))
-bad=clone(c); bad.players[1].slots[2].trigger='BrickKick'; check(not U.Validate(bad),'duplicate trigger')
+bad=clone(c); bad.players[1].slots[3].spell=179057; check(not U.Validate(bad),'duplicate generated trigger')
 bad=clone(c); bad.players[1].name='Brick\n/cast'; check(not U.Validate(bad))
 local utf=clone(c); utf.players[1].name='Brïck-Realm'; utf.players[1].slots[2].trigger='hello % tab'; eq(assert(U.Import(U.Export(utf))).players[1].name,'Brïck-Realm')
 U.db=c; U.Rebuild(); U.roster={'Brick-Realm','Mage-Realm'}
@@ -29,7 +29,7 @@ check(U.HandleChat('BrickKick','Brick-Realm',100),'valid sender')
 eq(U.entries['1:1'].expires,115)
 check(not U.HandleChat('BrickKick','Brick-Realm',101),'duplicate active timer')
 eq(U.entries['1:1'].expires,115)
-check(U.HandleChat('CustomStop','Brick-Realm',100)); eq(U.entries['1:2'].expires,133)
+check(U.HandleChat('BrickChaosNova','Brick-Realm',100)); eq(U.entries['1:2'].expires,133)
 check(not U.HandleChat(secret,'Brick-Realm',100)); check(not U.HandleChat('BrickKick',secret,100)); eq(U.blocked,2)
 eq(U.Order('kick',101)[1].player,'Mage-Realm','ready first')
 eq(U.Order('kick',116)[1].player,'Brick','priority restored')
@@ -41,7 +41,7 @@ eq(U.ResolveName('Brick-A',{'Brick-A','Brick-B'}),'brick-a')
 for _,f in ipairs(frames) do if f.events.ADDON_LOADED then f.scripts.OnEvent(f,'ADDON_LOADED','UnhingedCC'); break end end
 check(UnhingedCCDB~=nil,'saved variables initialized')
 check(U.Commit(c))
-local macro=assert(U.Macro(1,2)); check(macro:find('/cast Chaos Nova',1,true)); check(macro:find('/party CustomStop',1,true))
+local macro=assert(U.Macro(1,2)); check(macro:find('/cast Chaos Nova',1,true)); check(macro:find('/party BrickChaosNova',1,true))
 U.CreateAbilityMacro(1,2); eq(lastMacro,macro,'macro creation')
 U.OpenConfig()
 local function click(text)
@@ -99,7 +99,7 @@ U.CreateAbilityMacro(1,1); eq(created,0)
 local fresh=U.NewConfig(); fresh.players[1].name='Angeels-Realm'
 fresh.players[1].slots[1].spell=183752; fresh.players[1].slots[2].spell=179057
 fresh.players[1].slots[3].spell=1234195
-local v2=assert(U.Validate(fresh)); eq(v2.version,2)
+local v2=assert(U.Validate(fresh)); eq(v2.version,3)
 eq(U.Trigger(v2.players[1],1),'AngeelsKick')
 eq(U.Trigger(v2.players[1],2),'AngeelsChaosNova')
 eq(U.Trigger(v2.players[1],3),'AngeelsVoidNova')
@@ -113,18 +113,27 @@ legacy.players[1].slots[2].spell=179057; legacy.players[1].slots[2].trigger='Ang
 legacy.players[1].slots[3].spell=1234195; legacy.players[1].slots[3].trigger='MyCustomVoid'
 legacy.players[1].slots[2].override=33; legacy.positions.kick={x=300,y=500}; legacy.locked=false
 local migrated=assert(U.Validate(legacy))
-eq(migrated.players[1].slots[1].trigger,''); eq(U.Trigger(migrated.players[1],1),'AngeelsKick')
-eq(migrated.players[1].slots[2].trigger,''); eq(U.Trigger(migrated.players[1],2),'AngeelsChaosNova')
-eq(migrated.players[1].slots[3].trigger,'MyCustomVoid','preserve custom messages')
+eq(migrated.players[1].slots[1].trigger,nil); eq(U.Trigger(migrated.players[1],1),'AngeelsKick')
+eq(migrated.players[1].slots[2].trigger,nil); eq(U.Trigger(migrated.players[1],2),'AngeelsChaosNova')
+eq(migrated.players[1].slots[3].trigger,nil,'remove legacy custom messages')
 eq(migrated.players[1].slots[2].override,33); eq(migrated.positions.kick.x,300); eq(migrated.locked,false)
-local legacyText=U.Export(legacy):gsub('UCC2','UCC1',1)
+local function legacyExport(config,header)
+ local lines={header}
+ for _,p in ipairs(config.players) do
+  lines[#lines+1]='P\t'..p.name
+  for _,a in ipairs(p.slots) do lines[#lines+1]=table.concat({'A',a.spell,a.priority,a.override or '',a.trigger or ''},'\t') end
+ end
+ return table.concat(lines,'\n')
+end
+local legacyText=legacyExport(legacy,'UCC1')
 eq(U.Trigger(assert(U.Import(legacyText)).players[1],2),'AngeelsChaosNova','v1 import migration')
 check(U.Commit(migrated)); U.roster={'Angeels-Realm'}
 check(not U.HandleChat('Angeels-Realm:1','Angeels-Realm',200),'numeric IDs removed')
 check(not U.HandleChat('AngeelsKick','Other-Realm',200),'new IDs retain sender validation')
 check(U.HandleChat('AngeelsKick','Angeels-Realm',200))
 check(U.HandleChat('AngeelsChaosNova','Angeels-Realm',200))
-check(U.HandleChat('MyCustomVoid','Angeels-Realm',200))
+check(not U.HandleChat('MyCustomVoid','Angeels-Realm',200),'legacy custom IDs no longer accepted')
+check(U.HandleChat('AngeelsVoidNova','Angeels-Realm',200))
 check(U.Macro(1,2):find('/party AngeelsChaosNova',1,true))
 -- Exact compact layout: total width 20% narrower, no top padding, one physical pixel gap.
 local rows={}
@@ -159,14 +168,14 @@ clickSlot(1,3); click('Clear slot'); eq(U.db.players[1].slots[3].spell,0)
 -- Saving a displayed generated trigger keeps the slot dynamic.
 local dynamic=U.NewConfig(); dynamic.players[1].name='Angeels'; dynamic.players[1].slots[2].spell=179057
 dynamic.players[1].slots[2].trigger='AngeelsChaosNova'
-local normalized=assert(U.Validate(dynamic)); eq(normalized.players[1].slots[2].trigger,'')
+local normalized=assert(U.Validate(dynamic)); eq(normalized.players[1].slots[2].trigger,nil)
 normalized.players[1].slots[2].spell=1234195; eq(U.Trigger(normalized.players[1],2),'AngeelsVoidNova')
 -- Exercise v1 SavedVariables migration through the real login event handler.
 UnhingedCCDB=legacy
 for _,f in ipairs(frames) do
  if f.scripts.OnEvent then f.scripts.OnEvent(f,'ADDON_LOADED','UnhingedCC'); break end
 end
-eq(UnhingedCCDB.version,2); eq(UnhingedCCDB.positions.kick.x,300)
+eq(UnhingedCCDB.version,3); eq(UnhingedCCDB.positions.kick.x,300)
 eq(U.Trigger(UnhingedCCDB.players[1],2),'AngeelsChaosNova')
 -- UI scale changes retain a one-physical-pixel gap and mover lock state.
 UIParent.GetEffectiveScale=function() return 1.25 end
@@ -178,4 +187,29 @@ for _,f in ipairs(frames) do
  end
 end
 check(seenGap,'scaled row spacing verified')
+-- Old v2 imports cannot reactivate custom IDs; v3 exports contain no override field.
+local fromV2=assert(U.Import(legacyExport(legacy,'UCC2')))
+eq(fromV2.players[1].slots[3].trigger,nil)
+eq(U.Trigger(fromV2.players[1],3),'AngeelsVoidNova')
+local serialized=U.Export(legacy)
+check(serialized:match('^UCC3'))
+check(not serialized:find('MyCustomVoid',1,true),'export drops custom IDs even from unnormalized input')
+local roundtrip=assert(U.Import(serialized)); eq(roundtrip.players[1].slots[2].override,33)
+roundtrip.players[1].slots[2].trigger='SneakyOverride'
+eq(U.Trigger(roundtrip.players[1],2),'AngeelsChaosNova','runtime always uses generated IDs')
+roundtrip.players[1].name='Brick-Realm'
+eq(U.Trigger(roundtrip.players[1],2),'BrickChaosNova','IDs follow name changes')
+check(U.Commit(roundtrip)); U.roster={'Brick-Realm'}
+check(not U.HandleChat('SneakyOverride','Brick-Realm',300))
+check(U.HandleChat('BrickChaosNova','Brick-Realm',300))
+check(U.Macro(1,2):find('/party BrickChaosNova',1,true))
+click('Prioritisation')
+local readonly=0
+for _,f in ipairs(frames) do
+ if f.text=='BrickChaosNova' then
+  check(f.kind~='EditBox','generated tracking IDs are not editable')
+  if f.kind=='FontString' and f:IsShown() then readonly=readonly+1 end
+ end
+end
+check(readonly>0,'generated ID shown as read-only text')
 print('PASS: '..count..' assertions; Lua 5.1 model, event, macro, UI and timer tests')
