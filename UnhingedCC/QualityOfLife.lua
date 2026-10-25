@@ -1,6 +1,6 @@
 local _, U = ...
 local CVAR='chatBubblesParty'
-local status='Off.'
+local status='Status: Not Active - Disabled'
 local shuttingDown=false
 function U.InitOptions()
     shuttingDown=false
@@ -32,8 +32,12 @@ local function getValue()
 end
 local function setValue(value)
     if not C_CVar or not C_CVar.SetCVar then return false end
+    local before=getValue()
+    if before==value then return true end
     local ok=pcall(C_CVar.SetCVar,CVAR,value)
-    return ok and getValue()==value
+    if not ok or getValue()~=value then return false end
+    if before~=nil then U.Print(value=='1' and 'Party chat bubbles enabled.' or 'Party chat bubbles disabled.') end
+    return true
 end
 local function report(text)
     status=text
@@ -44,27 +48,32 @@ function U.UpdatePartyBubbles(shutdown)
     if not U.options or not U.db then return end
     if shutdown then shuttingDown=true end
     local previous=U.options.bubbleRestoreValue
-    if not U.options.hidePartyBubbles and previous==nil then report('Off.'); return end
+    if not U.options.hidePartyBubbles and previous==nil then report('Status: Not Active - Disabled'); return end
     local inInstance=IsInInstance()
     local matches=U.PartySetupMatchesGroup()
     local hide=not shuttingDown and U.options.hidePartyBubbles and inInstance and matches
     -- Re-evaluate after combat instead of retaining an outdated roster decision.
-    if InCombatLockdown() and (hide or previous~=nil) then report('Waiting until combat ends.'); return end
+    if InCombatLockdown() and (hide or previous~=nil) then
+        local active=previous~=nil and getValue()=='0'
+        report((active and 'Status: Active' or 'Status: Not Active')..' - Waiting for combat to end')
+        return
+    end
     if hide then
         local current=getValue()
-        if not current then report('Could not read the party bubble setting.'); return end
+        if not current then report('Status: Not Active - Could not read party bubbles'); return end
         if previous==nil then U.options.bubbleRestoreValue=current end
-        if current~='0' and not setValue('0') then report('Could not hide party bubbles. Another addon may control this setting.'); return end
-        report('Party chat bubbles are hidden.')
+        if current~='0' and not setValue('0') then report('Status: Not Active - Could not hide party bubbles'); return end
+        report('Status: Active')
     else
         if previous~=nil then
             local current=getValue()
-            if current~=previous and not setValue(previous) then report('Could not restore the party bubble setting.'); return end
+            if current~=previous and not setValue(previous) then report((current=='0' and 'Status: Active' or 'Status: Not Active')..' - Could not restore party bubbles'); return end
             U.options.bubbleRestoreValue=nil
         end
-        if not U.options.hidePartyBubbles then report('Off.')
-        elseif not inInstance then report('Waiting until you enter an instance.')
-        elseif not matches then report('The group does not match Party Setup.') end
+        if shuttingDown then report('Status: Not Active')
+        elseif not U.options.hidePartyBubbles then report('Status: Not Active - Disabled')
+        elseif not inInstance then report('Status: Not Active - Not in instance')
+        elseif not matches then report('Status: Not Active - Not in eligible party') end
     end
 end
 function U.SetHidePartyBubbles(enabled)

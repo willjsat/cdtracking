@@ -1,6 +1,6 @@
 # UnhingedCC
 
-A lightweight World of Warcraft **Retail 12.1.5** addon for manually announced party interrupts and crowd control. Version 0.6.0; Interface 120105. No runtime dependencies or bundled libraries.
+A lightweight World of Warcraft **Retail 12.1.5** addon for manually announced party interrupts and crowd control. Version 0.6.1; Interface 120105. No runtime dependencies or bundled libraries.
 
 ## Install
 
@@ -45,7 +45,7 @@ Prioritisation has aligned columns for order, player/ability, read-only chat ID,
 
 This hides ordinary party conversation as well as ability messages. It only changes bubbles on your client. Chat-window messages and cooldown tracking keep working. Say, yell and NPC bubble settings are left alone.
 
-The previous party-bubble setting is restored when you leave the instance, change to a group that does not match, or turn the option off. Changes wait until combat ends. If party bubbles were already off, they stay off afterwards. The page shows whether the option is active, waiting for a match, or waiting for combat to end.
+The previous party-bubble setting is restored when you leave the instance, change to a group that does not match, or turn the option off. Changes wait until combat ends. If party bubbles were already off, they stay off afterwards. The status beside the checkbox shows Active or Not Active, with the reason when it is waiting. Chat notifications confirm when the addon enables or disables party bubbles; unchanged settings and failed changes do not announce success.
 
 This is a local preference: imports, presets and Reset All do not turn it on or off. It is saved separately in `UnhingedCCOptions`. If another addon prevents the setting from changing, the Configuration page reports the problem. No continuous polling is used.
 
@@ -96,4 +96,4 @@ Tests execute the actual addon Lua in Lua 5.1 via Lupa, including model/config v
 
 Before use: enable script errors (`/console scriptErrors 1`), configure two real party members, test announcements from each, reject spoofed/partial messages, verify cooldown/priority transitions, drag/lock both groups, import/export and reload. Repeat in a dungeon during combat and check `/ucc status`. Test premade party and instance groups separately. Verify macros when casts fail, as those still announce. Run alongside your usual addons and check CPU/memory in game.
 
-To package: `python tools/package.py` creates `dist/UnhingedCC-0.6.0.zip` containing only the installable addon folder.
+To package: `python tools/package.py` creates `dist/UnhingedCC-0.6.1.zip` containing only the installable addon folder.

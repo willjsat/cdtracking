@@ -571,7 +571,7 @@ members={'Brick-Realm','Mage-Realm'}; U.Commit(matching()); U.Roster(); eq(bubbl
 U.roster={'Brick-Realm'}; U.UpdatePartyBubbles(); eq(bubbleValue,'1','incomplete roster restores bubbles')
 -- Combat waits; when combat ends the current conditions win, not an old queued value.
 U.Roster(); eq(bubbleValue,'0'); combat=true
-members={'Brick-Realm','Other-Realm'}; event('GROUP_ROSTER_UPDATE'); eq(bubbleValue,'0'); eq(U.BubbleStatus(),'Waiting until combat ends.')
+members={'Brick-Realm','Other-Realm'}; event('GROUP_ROSTER_UPDATE'); eq(bubbleValue,'0'); eq(U.BubbleStatus(),'Status: Active - Waiting for combat to end')
 members={'Brick-Realm','Mage-Realm'}; event('GROUP_ROSTER_UPDATE'); combat=false; event('PLAYER_REGEN_ENABLED'); eq(bubbleValue,'0')
 combat=true; U.SetHidePartyBubbles(false); eq(bubbleValue,'0'); combat=false; event('PLAYER_REGEN_ENABLED'); eq(bubbleValue,'1'); eq(U.options.bubbleRestoreValue,nil)
 combat=true; U.SetHidePartyBubbles(true); eq(bubbleValue,'1'); eq(U.options.bubbleRestoreValue,nil)
@@ -611,4 +611,44 @@ check(U.PartySetupMatchesGroup())
 -- Shutdown cannot be undone by a later roster event in the same session.
 U.SetHidePartyBubbles(true); eq(bubbleValue,'0'); event('PLAYER_LOGOUT'); eq(bubbleValue,'1')
 event('GROUP_ROSTER_UPDATE'); eq(bubbleValue,'1')
+-- Bubble chat notifications only follow confirmed setting changes.
+local originalPrint=U.Print; local notifications={}
+U.Print=function(text) notifications[#notifications+1]=text end
+U.InitOptions(); U.SetHidePartyBubbles(false)
+bubbleValue='1'; instance=false; refuse=false; combat=false
+U.SetHidePartyBubbles(true)
+eq(U.BubbleStatus(),'Status: Not Active - Not in instance'); eq(#notifications,0)
+instance=true; event('PLAYER_ENTERING_WORLD')
+eq(U.BubbleStatus(),'Status: Active'); eq(notifications[1],'Party chat bubbles disabled.')
+local notices=#notifications; event('GROUP_ROSTER_UPDATE'); event('PLAYER_REGEN_ENABLED'); eq(#notifications,notices,'no repeated notifications for unchanged values')
+instance=false; event('ZONE_CHANGED_NEW_AREA')
+eq(notifications[#notifications],'Party chat bubbles enabled.'); eq(#notifications,notices+1)
+instance=true; members={'Brick-Realm','Other-Realm'}; event('GROUP_ROSTER_UPDATE')
+eq(U.BubbleStatus(),'Status: Not Active - Not in eligible party')
+members={'Brick-Realm','Mage-Realm'}; U.SetHidePartyBubbles(false); U.Roster()
+notices=#notifications; bubbleValue='0'; U.SetHidePartyBubbles(true); eq(U.BubbleStatus(),'Status: Active')
+instance=false; event('PLAYER_ENTERING_WORLD'); eq(#notifications,notices,'already-disabled bubbles do not generate a false enabled notification')
+U.SetHidePartyBubbles(false); eq(U.BubbleStatus(),'Status: Not Active - Disabled')
+bubbleValue='1'; instance=true; refuse=true; U.SetHidePartyBubbles(true)
+eq(#notifications,notices,'failed changes do not announce success')
+refuse=false; U.SetHidePartyBubbles(false); combat=true; U.SetHidePartyBubbles(true)
+eq(U.BubbleStatus(),'Status: Not Active - Waiting for combat to end'); eq(#notifications,notices)
+combat=false; event('PLAYER_REGEN_ENABLED'); eq(#notifications,notices+1)
+U.SetHidePartyBubbles(false); eq(notifications[#notifications],'Party chat bubbles enabled.')
+U.Print=originalPrint
+-- Status sits next to the setting; the description is one concise paragraph.
+click('Configuration')
+local inlineStatus,description
+for _,f in ipairs(frames) do
+ if f.kind=='FontString' and f.text and visible(f) then
+  if f.text:find('Status: ',1,true)==1 then inlineStatus=f end
+  if f.text:find('Hides party chat bubbles in instances',1,true)==1 then description=f end
+ end
+end
+check(inlineStatus); eq(inlineStatus.point[3],-61); check(inlineStatus.point[2]>400)
+check(description); check(not description.text:find('\n',1,true)); check(#description.text<220)
+check(not description.text:find('normal party conversation',1,true))
+check(not description.text:find('Everyone in the group',1,true))
+check(not description.text:find('Messages still appear',1,true))
+check(not description.text:find('combat',1,true))
 print('PASS: '..count..' assertions; Lua 5.1 model, event, macro, UI and timer tests')
