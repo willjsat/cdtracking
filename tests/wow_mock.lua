@@ -83,3 +83,11 @@ secret={}; function issecretvalue(v) return rawequal(v,secret) end
 
 physicalHeight=768
 function GetPhysicalScreenSize() return 1920,physicalHeight end
+
+function IsInRaid() return false end
+function GetNumGroupMembers() return 2 end
+function IsInInstance() return false,'none' end
+function methods:SetChecked(v) self.checked=v end
+function methods:GetChecked() return self.checked end
+
+LE_PARTY_CATEGORY_HOME=1; LE_PARTY_CATEGORY_INSTANCE=2

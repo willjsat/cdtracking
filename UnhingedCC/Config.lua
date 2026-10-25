@@ -323,6 +323,25 @@ local function priorities()
     end
     layoutPriorities()
 end
+local function configuration()
+    local section=frame('Frame',nil,body,'BackdropTemplate'); section:SetSize(862,26); section:SetPoint('TOPLEFT',12,-4); S.Fill(section,S.section)
+    label(section,'Quality of Life',12,-5,'GameFontNormal',true):SetTextColor(unpack(S.gold))
+    local check=frame('CheckButton',nil,body,'BackdropTemplate'); check:SetSize(24,24); check:SetPoint('TOPLEFT',24,-56); S.Panel(check)
+    if not check.mark then
+        check.mark=check:CreateTexture(nil,'ARTWORK'); check.mark:SetPoint('TOPLEFT',5,-5); check.mark:SetPoint('BOTTOMRIGHT',-5,5)
+        check.mark:SetColorTexture(unpack(S.gold)); check:SetCheckedTexture(check.mark)
+    end
+    check:SetChecked(U.options.hidePartyBubbles)
+    check:SetScript('OnClick',function(self) U.SetHidePartyBubbles(self:GetChecked()) end)
+    label(body,'Hide party chat bubbles in instances',60,-61)
+    local text=label(body,"Hides all party chat bubbles above players while you're in an instance and your group matches Party Setup. This hides normal party conversation too. It does not apply to raid groups.\n\nEveryone in the group must be listed, including you. Leave unused name boxes empty. Names with a realm suffix are fine.\n\nMessages still appear in the chat window, and cooldown tracking keeps working.\n\nYour previous bubble setting is restored when you leave the instance, the group changes, or you turn this off. Changes made during combat wait until the fight ends.",24,-102)
+    text:SetWidth(810); text:SetHeight(234); text:SetJustifyH('LEFT'); text:SetJustifyV('TOP')
+    window.bubbleStatus=label(body,U.BubbleStatus(),24,-358); window.bubbleStatus:SetWidth(810); window.bubbleStatus:SetTextColor(unpack(S.muted))
+    body:SetHeight(420)
+end
+function U.RefreshBubbleStatus()
+    if window and window.bubbleStatus then window.bubbleStatus:SetText(U.BubbleStatus()) end
+end
 function U.RenderConfig()
     if not window then return end
     if picker then picker:Hide() end
@@ -338,12 +357,13 @@ function U.RenderConfig()
     for _,pool in pairs(activePool.regions) do for _,r in ipairs(pool) do r:Hide() end end
     body:SetSize(890,490); body:Show(); window.scroll:SetScrollChild(body); window.scroll:SetVerticalScroll(0)
     lock:SetText(U.db.locked and 'Unlock Bars' or 'Lock Bars')
-    window.heading:SetText(tab==1 and 'Party Setup' or 'Prioritisation')
-    window.description:SetText(tab==1 and 'Party members and abilities' or 'Lower numbers take priority. Leave cooldowns blank to use the default.')
+    window.heading:SetText(({ 'Party Setup','Prioritisation','Configuration' })[tab])
+    window.description:SetText(tab==1 and 'Party members and abilities' or tab==2 and 'Lower numbers take priority. Leave cooldowns blank to use the default.' or 'Optional settings')
     for i,b in ipairs(window.tabs) do b.selected=i==tab; S.Panel(b,b.selected and S.selected or nil,S.border) end
-    if tab==1 then party() else priorities() end
+    window.bubbleStatus=nil
+    if tab==1 then party() elseif tab==2 then priorities() else configuration() end
     activePool=nil
-    window.reset:SetShown(tab==1); refreshPresets()
+    window.reset:SetShown(tab==1); window.savePreset:SetShown(tab~=3); refreshPresets()
 end
 function U.OpenConfig()
     if not window then
@@ -360,7 +380,8 @@ function U.OpenConfig()
         label(side,'Settings',20,-28,'GameFontNormalLarge'):SetTextColor(unpack(S.gold))
         window.tabs={
             button(side,'Party Setup',12,-80,186,function() tab=1; U.RenderConfig() end),
-            button(side,'Prioritisation',12,-108,186,function() tab=2; U.RenderConfig() end),
+            button(side,'Prioritisation',12,-112,186,function() tab=2; U.RenderConfig() end),
+            button(side,'Configuration',12,-144,186,function() tab=3; U.RenderConfig() end),
         }
         for _,b in ipairs(window.tabs) do b:SetHeight(28) end
         label(side,'Display',20,-205,'GameFontNormalSmall',true):SetTextColor(unpack(S.gold))
@@ -373,12 +394,12 @@ function U.OpenConfig()
         window.presetScroll=S.Scroll(side); window.presetScroll:SetPoint('TOPLEFT',12,-420); window.presetScroll:SetSize(186,218)
         window.presetContent=CreateFrame('Frame',nil,window.presetScroll); window.presetContent:SetSize(180,1); window.presetScroll:SetScrollChild(window.presetContent)
         window.presetButtons={}
-        label(side,'0.5.3',20,-651)
+        label(side,'0.6.0',20,-651)
         window.heading=label(window,'',240,-50,'GameFontNormalLarge'); window.heading:SetTextColor(unpack(S.gold))
         window.description=label(window,'',240,-80); window.description:SetTextColor(unpack(S.muted))
         local line=window:CreateTexture(nil,'ARTWORK'); line:SetColorTexture(unpack(S.border)); line:SetSize(874,S.Pixel(window)); window.separator=line; line:SetPoint('TOPLEFT',240,-106)
         window.scroll=S.Scroll(window); window.scroll:SetPoint('TOPLEFT',226,-130); window.scroll:SetSize(895,505)
-        button(window,'Save Preset',976,-658,142,savePreset)
+        window.savePreset=button(window,'Save Preset',976,-658,142,savePreset)
         window.reset=button(window,'Reset All',242,-658,120,function()
             prompt('Reset setup','Reset party members, abilities, priorities and cooldown settings? Bar positions, lock state, saved presets and macros will be kept.',{button='Reset',cancel='Cancel',accept=function()
                 local ok,err=U.ResetConfig(); if ok then U.RenderConfig() end

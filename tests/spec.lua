@@ -515,4 +515,100 @@ for _,f in ipairs(frames) do
   check(math.abs(U.db.positions[f.kind].y/px-roundPixel(U.db.positions[f.kind].y/px))<.000001)
  end
 end
+-- Quality-of-life option: exact roster match, event-driven CVar ownership/restoration.
+local members={'Brick-Realm','Mage-Realm'}
+local instance,raid,combat=false,false,false
+local bubbleValue='1'; local writes={}; local refuse=false
+C_CVar={
+ GetCVar=function(name) eq(name,'chatBubblesParty'); return bubbleValue end,
+ SetCVar=function(name,value)
+  check(not combat,'no CVar writes in combat'); eq(name,'chatBubblesParty')
+  writes[#writes+1]=value; if not refuse then bubbleValue=value end
+ end,
+}
+IsInGroup=function() return #members>1 end
+IsInRaid=function() return raid end
+IsInInstance=function() return instance,instance and 'party' or 'none' end
+InCombatLockdown=function() return combat end
+GetNumGroupMembers=function() return #members end
+UnitExists=function(unit)
+ if unit=='player' then return true end
+ local n=tonumber(unit:match('^party(%d+)$')); return n and n<#members or false
+end
+UnitFullName=function(unit)
+ local n=unit=='player' and 1 or tonumber(unit:match('^party(%d+)$'))+1
+ return members[n]:match('^([^-]+)%-(.+)$')
+end
+local function event(name)
+ for _,f in ipairs(frames) do if f.events[name] then f.scripts.OnEvent(f,name); return end end
+ error('Event not registered: '..name)
+end
+local function matching()
+ local c=U.NewConfig(); c.players[1].name='Brick'; c.players[2].name='Mage-Realm'; return c
+end
+UnhingedCCOptions=nil; U.InitOptions(); U.Commit(matching()); U.Roster()
+eq(U.options.hidePartyBubbles,false); eq(#writes,0)
+check(U.PartySetupMatchesGroup())
+U.SetHidePartyBubbles(true); eq(bubbleValue,'1'); eq(#writes,0,'outside instance does not change bubbles')
+instance=true; event('PLAYER_ENTERING_WORLD'); eq(bubbleValue,'0'); eq(U.options.bubbleRestoreValue,'1')
+local nWrites=#writes; event('GROUP_ROSTER_UPDATE'); eq(#writes,nWrites,'matching events do not repeat writes')
+members={'Mage-Realm','Brick-Realm'}; event('GROUP_ROSTER_UPDATE'); eq(bubbleValue,'0','roster order does not matter')
+members={'Brick-Realm','Mage-Realm','Extra-Realm'}; event('GROUP_ROSTER_UPDATE'); eq(bubbleValue,'1'); eq(U.options.bubbleRestoreValue,nil)
+members={'Brick-Realm','Mage-Realm'}; event('GROUP_ROSTER_UPDATE'); eq(bubbleValue,'0')
+instance=false; event('ZONE_CHANGED_NEW_AREA'); eq(bubbleValue,'1')
+-- A player who already had bubbles off keeps that preference on exit.
+bubbleValue='0'; instance=true; event('PLAYER_ENTERING_WORLD'); eq(U.options.bubbleRestoreValue,'0')
+instance=false; event('PLAYER_ENTERING_WORLD'); eq(bubbleValue,'0'); eq(U.options.bubbleRestoreValue,nil)
+-- Missing names, extra names, ambiguous names, raids and solo groups cannot match.
+instance=true; bubbleValue='1'
+local extra=matching(); extra.players[3].name='Extra-Realm'; U.Commit(extra); eq(bubbleValue,'1')
+local alias=matching(); alias.players[2].name='Brick-Realm'; U.Commit(alias); check(not U.PartySetupMatchesGroup())
+members={'Brick-A','Brick-B'}; local ambiguous=matching(); ambiguous.players[2].name='Brick-B'; U.Commit(ambiguous); U.Roster(); check(not U.PartySetupMatchesGroup())
+ambiguous.players[1].name='Brick-A'; U.Commit(ambiguous); check(U.PartySetupMatchesGroup()); eq(bubbleValue,'0')
+raid=true; event('GROUP_ROSTER_UPDATE'); eq(bubbleValue,'1'); check(not U.PartySetupMatchesGroup()); raid=false
+members={'Brick-Realm'}; event('GROUP_ROSTER_UPDATE'); check(not U.PartySetupMatchesGroup())
+members={'Brick-Realm','Mage-Realm'}; U.Commit(matching()); U.Roster(); eq(bubbleValue,'0')
+U.roster={'Brick-Realm'}; U.UpdatePartyBubbles(); eq(bubbleValue,'1','incomplete roster restores bubbles')
+-- Combat waits; when combat ends the current conditions win, not an old queued value.
+U.Roster(); eq(bubbleValue,'0'); combat=true
+members={'Brick-Realm','Other-Realm'}; event('GROUP_ROSTER_UPDATE'); eq(bubbleValue,'0'); eq(U.BubbleStatus(),'Waiting until combat ends.')
+members={'Brick-Realm','Mage-Realm'}; event('GROUP_ROSTER_UPDATE'); combat=false; event('PLAYER_REGEN_ENABLED'); eq(bubbleValue,'0')
+combat=true; U.SetHidePartyBubbles(false); eq(bubbleValue,'0'); combat=false; event('PLAYER_REGEN_ENABLED'); eq(bubbleValue,'1'); eq(U.options.bubbleRestoreValue,nil)
+combat=true; U.SetHidePartyBubbles(true); eq(bubbleValue,'1'); eq(U.options.bubbleRestoreValue,nil)
+U.SetHidePartyBubbles(false); combat=false; event('PLAYER_REGEN_ENABLED'); eq(bubbleValue,'1')
+-- Logout and saved recovery markers restore the actual previous value.
+U.SetHidePartyBubbles(true); eq(bubbleValue,'0'); event('PLAYER_LOGOUT'); eq(bubbleValue,'1'); eq(U.options.bubbleRestoreValue,nil)
+UnhingedCCOptions={hidePartyBubbles=false,bubbleRestoreValue='1'}; bubbleValue='0'; U.InitOptions(); U.UpdatePartyBubbles(); eq(bubbleValue,'1')
+refuse=true; U.SetHidePartyBubbles(true); eq(bubbleValue,'1'); check(U.BubbleStatus():find('Could not hide',1,true))
+refuse=false; U.SetHidePartyBubbles(false); U.SetHidePartyBubbles(true); eq(bubbleValue,'0')
+refuse=true; U.SetHidePartyBubbles(false); eq(U.options.bubbleRestoreValue,'1'); check(U.BubbleStatus():find('Could not restore',1,true))
+refuse=false; event('PLAYER_REGEN_ENABLED'); eq(bubbleValue,'1'); eq(U.options.bubbleRestoreValue,nil)
+-- Configuration page, checkbox behaviour and independent local preference storage.
+U.OpenConfig(); click('Configuration')
+eq(options.heading:GetText(),'Configuration'); check(not saveButton:IsShown()); check(not options.reset:IsShown())
+local checkbox
+for _,f in ipairs(frames) do if f.kind=='CheckButton' and visible(f) then checkbox=f end end
+check(checkbox); checkbox:SetChecked(true); checkbox.scripts.OnClick(checkbox)
+eq(U.options.hidePartyBubbles,true); eq(bubbleValue,'0')
+check(U.SavePreset('QoL separation'))
+U.SetHidePartyBubbles(false); U.LoadPreset('QoL separation'); eq(U.options.hidePartyBubbles,false,'presets do not enable local bubble setting')
+U.SetHidePartyBubbles(true)
+local shared=assert(U.Import(U.Export(U.db))); U.Commit(shared); eq(U.options.hidePartyBubbles,true,'import retains local option')
+U.ResetConfig(); eq(U.options.hidePartyBubbles,true,'party reset preserves QoL option'); eq(bubbleValue,'1','empty party setup restores bubbles')
+click('Party Setup'); eq(options.tabs[1].point[3]-options.tabs[2].point[3]-options.tabs[1].height,4,'4px sidebar button gap')
+click('Configuration')
+local beforePages=#frames
+for cycle=1,5 do click('Party Setup'); click('Prioritisation'); click('Configuration') end
+check(#frames<=beforePages+12,'configuration widgets are pooled')
+-- Group-category selection supports both queued instance parties and home parties.
+U.SetHidePartyBubbles(false); U.Commit(matching()); U.Roster()
+IsInGroup=function(category) return category==LE_PARTY_CATEGORY_INSTANCE end
+GetNumGroupMembers=function(category) eq(category,LE_PARTY_CATEGORY_INSTANCE); return 2 end
+check(U.PartySetupMatchesGroup())
+IsInGroup=function(category) return category==LE_PARTY_CATEGORY_HOME end
+GetNumGroupMembers=function(category) eq(category,LE_PARTY_CATEGORY_HOME); return 2 end
+check(U.PartySetupMatchesGroup())
+-- Shutdown cannot be undone by a later roster event in the same session.
+U.SetHidePartyBubbles(true); eq(bubbleValue,'0'); event('PLAYER_LOGOUT'); eq(bubbleValue,'1')
+event('GROUP_ROSTER_UPDATE'); eq(bubbleValue,'1')
 print('PASS: '..count..' assertions; Lua 5.1 model, event, macro, UI and timer tests')
